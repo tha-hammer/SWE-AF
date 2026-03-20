@@ -798,6 +798,7 @@ class BuildConfig(BaseModel):
     # environment; this controls how long the request stays open before the
     # control plane treats it as expired.
     approval_expires_in_hours: int = 72
+    enable_single_issue_fast_path: bool = True  # Skip worktrees/merge for 1-issue builds
 
     @model_validator(mode="before")
     @classmethod
@@ -902,6 +903,7 @@ class BuildConfig(BaseModel):
             "max_ci_fix_cycles": self.max_ci_fix_cycles,
             "ci_wait_seconds": self.ci_wait_seconds,
             "ci_poll_seconds": self.ci_poll_seconds,
+            "enable_single_issue_fast_path": self.enable_single_issue_fast_path,
         }
 
 
@@ -1073,6 +1075,7 @@ class ExecutionConfig(BaseModel):
     max_ci_fix_cycles: int = 2
     ci_wait_seconds: int = 1500
     ci_poll_seconds: int = 30
+    enable_single_issue_fast_path: bool = True  # Skip worktrees/merge for 1-issue builds
 
     @model_validator(mode="before")
     @classmethod
