@@ -15,6 +15,7 @@ from swe_af.execution.ci_gate import watch_pr_checks
 from swe_af.execution.schemas import (
     DEFAULT_AGENT_MAX_TURNS,
     AdvisorAction,
+    BatchReviewResult,
     CIFailedCheck,
     CIFixResult,
     CIWatchResult,
@@ -35,9 +36,12 @@ from swe_af.execution.schemas import (
     RepoFinalizeResult,
     RetryAdvice,
     ReviewCommentRef,
+    ReviewSanityGate,
     VerificationResult,
     WorkspaceInfo,
 )
+from swe_af.prompts.batch_reviewer import SYSTEM_PROMPT as BATCH_REVIEWER_SYSTEM_PROMPT
+from swe_af.prompts.batch_reviewer import batch_reviewer_task_prompt
 from swe_af.prompts.ci_fixer import SYSTEM_PROMPT as CI_FIXER_SYSTEM_PROMPT
 from swe_af.prompts.ci_fixer import ci_fixer_task_prompt
 from swe_af.prompts.pr_resolver import SYSTEM_PROMPT as PR_RESOLVER_SYSTEM_PROMPT
@@ -76,6 +80,10 @@ from swe_af.prompts.replanner import SYSTEM_PROMPT as REPLANNER_SYSTEM_PROMPT
 from swe_af.prompts.replanner import replanner_task_prompt
 from swe_af.prompts.retry_advisor import SYSTEM_PROMPT as RETRY_ADVISOR_SYSTEM_PROMPT
 from swe_af.prompts.retry_advisor import retry_advisor_task_prompt
+from swe_af.prompts.review_sanity_gate import (
+    SYSTEM_PROMPT as REVIEW_SANITY_GATE_SYSTEM_PROMPT,
+)
+from swe_af.prompts.review_sanity_gate import review_sanity_gate_task_prompt
 from swe_af.prompts.verifier import SYSTEM_PROMPT as VERIFIER_SYSTEM_PROMPT
 from swe_af.prompts.verifier import verifier_task_prompt
 from swe_af.prompts.workspace import (
@@ -1334,6 +1342,132 @@ async def run_issue_complexity_gate(
         complexity="standard",
         needs_qa=False,
         confident=False,
+    ).model_dump()
+
+
+@router.reasoner()
+async def run_review_sanity_gate(
+    coder_result: dict,
+    issue: dict,
+    iteration_id: str = "",
+    model: str = "haiku",
+    ai_provider: str = "claude",
+) -> dict:
+    """Fast .ai() sanity check — replaces full harness review on default path.
+
+    Returns a ReviewSanityGate dict with action (approve/fix/block),
+    risk_areas, confident flag, and summary.  When confident=false the
+    caller should fall back to the full run_code_reviewer harness.
+    """
+    issue_name = issue.get("name", "?")
+    router.note(
+        f"Review sanity gate starting: {issue_name}",
+        tags=["review_sanity_gate", "start"],
+    )
+
+    task_prompt = review_sanity_gate_task_prompt(
+        coder_result=coder_result,
+        issue=issue,
+        iteration_id=iteration_id,
+    )
+
+    try:
+        result = await router.ai(
+            task_prompt,
+            system=REVIEW_SANITY_GATE_SYSTEM_PROMPT,
+            schema=ReviewSanityGate,
+            model=model,
+        )
+        if result.parsed is not None:
+            router.note(
+                f"Review sanity gate complete: {issue_name}, "
+                f"action={result.parsed.action}, "
+                f"confident={result.parsed.confident}",
+                tags=["review_sanity_gate", "complete"],
+            )
+            out = result.parsed.model_dump()
+            out["iteration_id"] = iteration_id
+            return out
+    except Exception as e:
+        router.note(
+            f"Review sanity gate failed: {issue_name}: {e}",
+            tags=["review_sanity_gate", "error"],
+        )
+
+    # On failure, return not-confident so caller falls back to full reviewer
+    return ReviewSanityGate(
+        likely_clean=False,
+        risk_areas=["sanity gate failed — falling back to full review"],
+        action="fix",
+        confident=False,
+        summary=f"Review sanity gate failed for {issue_name} — not confident",
+    ).model_dump()
+
+
+@router.reasoner()
+async def run_batch_reviewer(
+    repo_path: str,
+    integration_branch: str,
+    completed_issues: list[dict] | None = None,
+    prd_summary: str = "",
+    architecture_summary: str = "",
+    model: str = "sonnet",
+    permission_mode: str = "",
+    ai_provider: str = "claude",
+) -> dict:
+    """Post-merge batch review — sees the full combined diff of all issues.
+
+    Runs as a .harness() with tool access to read the merged codebase and
+    catch cross-issue quality concerns (naming, duplication, architecture).
+    Returns a BatchReviewResult dict.
+    """
+    completed_issues = completed_issues or []
+    router.note(
+        f"Batch reviewer starting: {len(completed_issues)} issues on {integration_branch}",
+        tags=["batch_reviewer", "start"],
+    )
+
+    task_prompt = batch_reviewer_task_prompt(
+        repo_path=repo_path,
+        integration_branch=integration_branch,
+        completed_issues=completed_issues,
+        prd_summary=prd_summary,
+        architecture_summary=architecture_summary,
+    )
+
+    provider = "claude-code" if ai_provider == "claude" else ai_provider
+
+    try:
+        result = await router.harness(
+            task_prompt,
+            system_prompt=BATCH_REVIEWER_SYSTEM_PROMPT,
+            schema=BatchReviewResult,
+            model=model,
+            provider=provider,
+            tools=["Read", "Glob", "Grep", "Bash"],
+            cwd=repo_path,
+            max_turns=DEFAULT_AGENT_MAX_TURNS,
+            permission_mode=permission_mode or None,
+        )
+        if result.parsed is not None:
+            router.note(
+                f"Batch reviewer complete: approved={result.parsed.approved}, "
+                f"blocking_issues={len(result.parsed.blocking_issues)}, "
+                f"cross_issue_concerns={len(result.parsed.cross_issue_concerns)}",
+                tags=["batch_reviewer", "complete"],
+            )
+            return result.parsed.model_dump()
+    except Exception as e:
+        router.note(
+            f"Batch reviewer failed: {e}",
+            tags=["batch_reviewer", "error"],
+        )
+
+    return BatchReviewResult(
+        approved=True,  # don't block on batch reviewer failure
+        blocking_issues=[],
+        cross_issue_concerns=[],
+        summary="Batch reviewer failed — not blocking pipeline",
     ).model_dump()
 
 
