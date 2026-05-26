@@ -166,6 +166,7 @@ async def run_product_manager(
     permission_mode: str = "",
     ai_provider: str = "claude",
     workspace_manifest: dict | None = None,
+    prior_user_responses: list[dict] | None = None,
 ) -> dict:
     """Run the product manager agent to scope a goal into a PRD."""
     router.note("PM starting", tags=["pm", "start"])
@@ -181,35 +182,59 @@ async def run_product_manager(
         repo_path=repo_path,
         prd_path=paths["prd"],
         additional_context=additional_context,
+        prior_user_responses=prior_user_responses,
     )
     ws_manifest = (
         WorkspaceManifest(**workspace_manifest) if workspace_manifest else None
     )
-    task_prompt = pm_task_prompt(
-        goal=goal,
-        repo_path=repo_path,
-        prd_path=paths["prd"],
-        additional_context=additional_context,
-        workspace_manifest=ws_manifest,
-    )
     provider = runtime_to_harness_adapter(ai_provider)
-    result = await router.harness(
-        prompt=task_prompt,
-        schema=PRD,
-        provider=provider,
-        model=model,
-        max_turns=max_turns,
-        tools=["Read", "Write", "Glob", "Grep", "Bash"],
-        permission_mode=permission_mode or None,
-        system_prompt=system_prompt,
-        cwd=repo_path,
+
+    from swe_af.hitl import (  # noqa: PLC0415
+        AskUserBudget,
+        approval_webhook_url,
+        build_hax_client_from_env,
+        run_with_ask_user,
     )
-    check_fatal_harness_error(result)
-    if result.parsed is None:
+
+    async def _invoke_pm(prior_user_responses: list[dict] | None) -> PRD | None:
+        task_prompt = pm_task_prompt(
+            goal=goal,
+            repo_path=repo_path,
+            prd_path=paths["prd"],
+            additional_context=additional_context,
+            workspace_manifest=ws_manifest,
+            prior_user_responses=prior_user_responses,
+        )
+        result = await router.harness(
+            prompt=task_prompt,
+            schema=PRD,
+            provider=provider,
+            model=model,
+            max_turns=max_turns,
+            tools=["Read", "Write", "Glob", "Grep", "Bash"],
+            permission_mode=permission_mode or None,
+            system_prompt=system_prompt,
+            cwd=repo_path,
+        )
+        check_fatal_harness_error(result)
+        return result.parsed
+
+    initial_prior = list(prior_user_responses or [])
+    parsed = await run_with_ask_user(
+        reasoner_fn=_invoke_pm,
+        reasoner_kwargs={"prior_user_responses": initial_prior},
+        app=router,
+        hax_client=build_hax_client_from_env(),
+        budget=AskUserBudget(remaining=2),
+        webhook_url=approval_webhook_url(router),
+        note_label="product_manager",
+    )
+
+    if parsed is None:
         raise RuntimeError("Product manager failed to produce a valid PRD")
 
     router.note("PM complete", tags=["pm", "complete"])
-    return result.parsed.model_dump()
+    return parsed.model_dump()
 
 
 @router.reasoner()

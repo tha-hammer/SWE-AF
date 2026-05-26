@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from swe_af.hitl.ask_user import AskUserForm
+
 
 class PRD(BaseModel):
     """Product Requirements Document produced by the product manager."""
@@ -15,6 +17,7 @@ class PRD(BaseModel):
     out_of_scope: list[str]
     assumptions: list[str] = []
     risks: list[str] = []
+    ask_user_form: AskUserForm | None = None  # see swe_af/hitl/ for semantics
 
 
 class ArchitectureComponent(BaseModel):

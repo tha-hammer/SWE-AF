@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from swe_af.execution.schemas import WorkspaceManifest
+from swe_af.hitl.ask_user import format_prior_user_responses
 from swe_af.prompts._utils import workspace_context_block
 
 SYSTEM_PROMPT = """\
@@ -62,7 +63,36 @@ Your PRD will be executed by autonomous AI coding agents, not human developers.
   into a parallel execution graph.
 - **Interface-first requirements**: When multiple components interact, specify
   the interface contract (function signatures, types, error variants) in your
-  acceptance criteria. Parallel agents implement to this contract independently.\
+  acceptance criteria. Parallel agents implement to this contract independently.
+
+## Asking the User for Clarification (`ask_user_form`)
+
+If the goal is **fundamentally ambiguous** — multiple plausible interpretations
+would yield very different PRDs — emit ``ask_user_form`` instead of guessing.
+The orchestrator pauses the ENTIRE workflow on the control plane, shows the
+user the form, and re-invokes you with their answers in
+``prior_user_responses``. You can then write the real PRD.
+
+When to ask:
+- The goal references multiple features/pages/components and priority is unclear.
+- The goal's success criteria are unstated and you cannot infer them safely from
+  the codebase.
+- Two architecturally different interpretations are plausible and choosing one
+  forecloses the other.
+
+When NOT to ask:
+- For style preferences, tone, or embellishment — those are not your concern.
+- For details you can reasonably assume and document under ``assumptions``.
+- When ``prior_user_responses`` already covers the ambiguity — USE the existing
+  answer; never re-ask the same question.
+
+On the iteration where you emit ``ask_user_form``, fill the other PRD fields
+with minimal placeholders — they will be discarded. On the next invocation
+(with ``prior_user_responses`` populated), produce the real PRD with
+``ask_user_form`` set to ``null``.
+
+Pausing stops the build until the human responds (potentially hours/days).
+Be parsimonious — one focused question, then commit.\
 """
 
 
@@ -72,12 +102,21 @@ def product_manager_prompts(
     repo_path: str,
     prd_path: str,
     additional_context: str = "",
+    prior_user_responses: list[dict] | None = None,
 ) -> tuple[str, str]:
     """Return (system_prompt, task_prompt) for the product manager.
 
     Returns:
         Tuple of (system_prompt, task_prompt)
     """
+    prior_block = format_prior_user_responses(prior_user_responses)
+    if prior_block:
+        additional_context = (
+            f"{prior_block}\n\n{additional_context}"
+            if additional_context
+            else prior_block
+        )
+
     context_block = ""
     if additional_context:
         context_block = f"\n## Additional Context\n{additional_context}\n"
@@ -120,6 +159,7 @@ def pm_task_prompt(
     prd_path: str,
     additional_context: str = "",
     workspace_manifest: WorkspaceManifest | None = None,
+    prior_user_responses: list[dict] | None = None,
 ) -> str:
     """Build the task prompt for the product manager agent.
 
@@ -129,6 +169,7 @@ def pm_task_prompt(
         prd_path: Path where the PRD should be written.
         additional_context: Optional additional context.
         workspace_manifest: Optional multi-repo workspace manifest.
+        prior_user_responses: Accumulated answers from prior ask_user pauses.
 
     Returns:
         Task prompt string.
@@ -138,6 +179,7 @@ def pm_task_prompt(
         repo_path=repo_path,
         prd_path=prd_path,
         additional_context=additional_context,
+        prior_user_responses=prior_user_responses,
     )
     ws_block = workspace_context_block(workspace_manifest)
     if ws_block:
