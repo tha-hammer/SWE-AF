@@ -130,10 +130,34 @@ def _field_type(finfo: FieldInfo, tb: TypeBuilder):
 
 
 def pydantic_to_typebuilder(model: type[BaseModel]) -> TypeBuilder:
-    """Build a fresh TypeBuilder whose @@dynamic DynamicOutput root mirrors *model*."""
+    """Build a fresh TypeBuilder whose @@dynamic DynamicOutput root mirrors *model*.
+
+    **omit-if-defaulted contract (Behavior 0a):** a field whose type cannot be
+    mapped onto a BAML FieldType (``_map_type`` raises ``TypeError`` — e.g. a bare
+    ``dict`` / ``Any`` / ``list[dict]`` / ``dict[str, Any]``) is **skipped** when it
+    has a Pydantic default, and **re-raised** when it is required. Skipping a
+    *defaulted* unmappable field is safe: it is simply absent from the BAML type, so
+    SAP never emits it, ``_strip_none`` leaves it absent, and ``model_validate``
+    restores the Pydantic default. A *required* unmappable field still raises, so we
+    never silently drop required data. This lets dict-bearing reasoner schemas
+    (``QAResult``, ``MergeResult``, ``CoderResult``) map and benefit from BAML parse
+    + the ``output_format`` render, instead of declining wholesale to ``None``.
+
+    Upgrade path (opt-in, not wired here): a field whose dict *contents* must
+    survive the round-trip can be mapped via a recursive ``JsonValue`` alias emitted
+    through ``tb.add_baml`` (``map<string, JsonValue>``); see the plan's Behavior 0a
+    spike. The ``string`` + ``json.loads`` approach is rejected — BAML SAP writes
+    non-strict JSON (unquoted keys) that ``json.loads`` cannot read.
+    """
     tb = TypeBuilder()
     for fname, finfo in model.model_fields.items():
-        tb.DynamicOutput.add_property(fname, _field_type(finfo, tb))
+        try:
+            tb.DynamicOutput.add_property(fname, _field_type(finfo, tb))
+        except TypeError:
+            if finfo.is_required():
+                raise
+            # Defaulted + unmappable → omit; the Pydantic default fills it back in.
+            continue
     return tb
 
 

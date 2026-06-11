@@ -15,7 +15,10 @@ from baml_client.sync_client import b
 from baml_client.type_builder import TypeBuilder
 from swe_af.baml_bridge import baml_parse, deserialize, pydantic_to_typebuilder
 from swe_af.execution.schemas import (
+    CoderResult,
     CriterionResult,
+    MergeResult,
+    QAResult,
     RetryAdvice,
     VerificationResult,
 )
@@ -100,3 +103,55 @@ def test_unsupported_type_raises_type_error():
 
 def test_pydantic_to_typebuilder_returns_typebuilder():
     assert isinstance(pydantic_to_typebuilder(RetryAdvice), TypeBuilder)
+
+
+# ---------------------------------------------------------------------------
+# Behavior 0a: bare dict / Any hardening — omit-if-defaulted
+# ---------------------------------------------------------------------------
+#
+# These schemas carry a single unmappable field that has a default:
+#   MergeResult.conflict_resolutions: list[dict] = []
+#   CoderResult.agent_retro: dict = {}
+#   QAResult.test_failures: list[dict] = []
+# Before B0a, pydantic_to_typebuilder raised TypeError on them (declined to None
+# via baml_parse_or_none — silently never benefitting from BAML). After B0a it
+# skips the unmappable *defaulted* field and maps the rest.
+
+
+@pytest.mark.parametrize("model", [MergeResult, CoderResult, QAResult])
+def test_dict_bearing_schema_maps_without_raising(model):
+    assert isinstance(pydantic_to_typebuilder(model), TypeBuilder)
+
+
+def test_merge_result_roundtrips_with_dict_field_at_default():
+    inst = MergeResult(
+        success=True,
+        merged_branches=["feat/a"],
+        failed_branches=[],
+        needs_integration_test=False,
+        summary="ok",
+    )
+    # conflict_resolutions defaults to [] and is omitted from the BAML type;
+    # _strip_none + the Pydantic default restore it on model_validate.
+    assert _roundtrip(MergeResult, inst.model_dump()) == inst
+
+
+def test_coder_result_roundtrips_with_dict_field_at_default():
+    inst = CoderResult(files_changed=["x.py"], summary="did", iteration_id="i1")
+    assert _roundtrip(CoderResult, inst.model_dump()) == inst  # agent_retro back at {}
+
+
+def test_qa_result_roundtrips_with_dict_field_at_default():
+    inst = QAResult(passed=True, summary="green", iteration_id="i1")
+    assert _roundtrip(QAResult, inst.model_dump()) == inst  # test_failures back at []
+
+
+def test_required_bare_dict_field_still_raises():
+    """We only omit *defaulted* unmappable fields — a required one must still raise,
+    so required data is never silently dropped."""
+
+    class RequiredDict(BaseModel):
+        payload: dict  # required, bare dict → unmappable, no default
+
+    with pytest.raises(TypeError):
+        pydantic_to_typebuilder(RequiredDict)
