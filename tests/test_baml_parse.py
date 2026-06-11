@@ -16,7 +16,7 @@ import pytest
 from agentfield.harness._schema import try_parse_from_text
 
 from swe_af.baml_bridge import baml_parse, baml_parse_or_none
-from swe_af.execution.schemas import RetryAdvice
+from swe_af.execution.schemas import ReplanDecision, RetryAdvice
 
 pytestmark = pytest.mark.unit
 
@@ -69,3 +69,70 @@ def test_recoverable_malformed_sdk_none_baml_parses():
     got = baml_parse(text, RetryAdvice)
     assert got.should_retry is True
     assert got.diagnosis == "flaky"
+
+
+# ---------------------------------------------------------------------------
+# SB-5: captured / corpus regression
+# ---------------------------------------------------------------------------
+
+# Every RetryAdvice-shaped degraded fixture. Real captures dropped into
+# tests/fixtures/messy_cli_output_retry_advice*.txt are covered automatically —
+# SB-5's positive case folds into this corpus (plan line 410) since no genuine
+# malformed-JSON capture exists in-repo yet.
+RETRY_ADVICE_CORPUS = sorted(FIXTURES.glob("messy_cli_output_retry_advice*.txt"))
+
+# Genuine captured build logs whose reasoners hit `parsed is None -> fallback`.
+# Gitignored .artifacts may be absent in CI; skipif keeps the suite green there.
+REAL_CAPTURE_LOG_DIR = (
+    Path(__file__).resolve().parents[1] / "examples" / "pyrust" / ".artifacts" / "logs"
+)
+REAL_CAPTURE_LOGS = (
+    sorted(REAL_CAPTURE_LOG_DIR.glob("*.jsonl")) if REAL_CAPTURE_LOG_DIR.is_dir() else []
+)
+
+
+@pytest.mark.parametrize("fixture_path", RETRY_ADVICE_CORPUS, ids=lambda p: p.name)
+def test_corpus_sdk_drops_but_baml_parses(fixture_path):
+    text = fixture_path.read_text()
+    assert try_parse_from_text(text, RetryAdvice) is None
+    parsed = baml_parse(text, RetryAdvice)
+    assert isinstance(parsed, RetryAdvice)
+    assert isinstance(parsed.should_retry, bool)
+    assert parsed.diagnosis.strip()
+
+
+def _captured_error_texts(path: Path) -> list[str]:
+    texts: list[str] = []
+    for line in path.read_text().splitlines():
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get("event") == "assistant":
+            for block in rec.get("content", []):
+                if (
+                    isinstance(block, dict)
+                    and block.get("type") == "text"
+                    and "API Error" in (block.get("text") or "")
+                ):
+                    texts.append(block["text"])
+    return texts
+
+
+@pytest.mark.skipif(not REAL_CAPTURE_LOGS, reason="no captured build logs present")
+def test_real_capture_baml_declines_without_crash():
+    """Real captured parsed-is-None build logs: BAML DECLINES (None), never crashes.
+
+    These genuine captures are auth-error strings, not schema-shaped JSON, so None
+    is the *correct* verdict. The test pins two seam-safety guarantees on real data:
+    baml_parse_or_none never raises — even for ReplanDecision, whose untyped
+    list[dict] fields are unmappable — and never falsely "rescues" a transport
+    failure into a bogus typed object.
+    """
+    seen = 0
+    for log in REAL_CAPTURE_LOGS:
+        for text in _captured_error_texts(log):
+            seen += 1
+            assert try_parse_from_text(text, ReplanDecision) is None
+            assert baml_parse_or_none(text, ReplanDecision) is None
+    assert seen > 0, "expected at least one captured API-error payload"

@@ -183,10 +183,17 @@ def baml_parse(text: str, schema: type[M]) -> M:
 
 
 def baml_parse_or_none(text: str, schema: type[M]) -> Optional[M]:
-    """Parse *text* into *schema*; return None on any failure (seam contract)."""
+    """Parse *text* into *schema*; return None on ANY failure (seam contract).
+
+    Deliberately catches every exception — including the ``TypeError`` raised when
+    a schema contains an unmappable field (untyped ``dict``/``Any``). The seam runs
+    on the SDK's ``None`` for arbitrary reasoner schemas; it must never crash the
+    parse path, only decline to improve on it. Declining preserves the SDK's
+    existing None → FailureType.SCHEMA fallback.
+    """
     try:
         return baml_parse(text, schema)
-    except (ValueError, baml_py.errors.BamlError):
+    except Exception:
         return None
 
 
