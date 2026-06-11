@@ -199,3 +199,59 @@ def run_local_check(
         exit_code=completed.returncode,
         output_tail=_tail(output),
     )
+
+
+@dataclass(frozen=True)
+class GateOutcome:
+    """Result of the deterministic backpressure gate for one coder iteration.
+
+    ``red`` — a resolved check failed (and was not a benign skip).
+    ``tail`` — the formatted failure tail to feed back to the coder.
+    ``ran`` — whether any command actually executed (``False`` = nothing resolved,
+    so the rung is a transparent no-op and the bound should not be reset).
+    """
+
+    red: bool
+    tail: str
+    ran: bool
+
+
+# pytest exits 5 when it collected no tests — common in early-TDD issues before any
+# test exists. Treat as not-red (skip), not a build-blocking failure.
+_PYTEST_NO_TESTS_COLLECTED = 5
+
+
+def _is_benign_skip(check: ResolvedCheck, result: CheckResult) -> bool:
+    first_token = check.command.strip().split(maxsplit=1)[0] if check.command.strip() else ""
+    return result.exit_code == _PYTEST_NO_TESTS_COLLECTED and first_token == "pytest"
+
+
+def _format_gate_tail(check: ResolvedCheck, result: CheckResult) -> str:
+    return (
+        f"Deterministic check failed (source={check.source}): `{check.command}`\n"
+        f"exit code: {result.exit_code}\n"
+        f"--- output tail ---\n{result.output_tail}"
+    )
+
+
+def _run_deterministic_gate(
+    issue: dict,
+    worktree_path: str,
+    timeout: float = DET_CHECK_TIMEOUT_SECONDS,
+    runner: LocalRunner | None = None,
+) -> GateOutcome:
+    """Run *issue*'s resolved checks in *worktree_path*; the first real failure reds.
+
+    Deep module: the coding loop calls this and reads a simple ``GateOutcome``. A
+    pytest "no tests collected" (exit 5) is a benign skip — an early-TDD issue with
+    no tests yet does not block. No commands resolved → ``ran=False`` (no-op rung).
+    """
+    resolved = resolve_issue_commands(issue, worktree_path)
+    if not resolved:
+        return GateOutcome(red=False, tail="", ran=False)
+    for check in resolved:
+        result = run_local_check(check.command, worktree_path, runner=runner, timeout=timeout)
+        if result.passed or _is_benign_skip(check, result):
+            continue
+        return GateOutcome(red=True, tail=_format_gate_tail(check, result), ran=True)
+    return GateOutcome(red=False, tail="", ran=True)
