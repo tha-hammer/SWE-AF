@@ -13,11 +13,21 @@ from typing import Any
 # invokes). Guarded so a missing/ungenerated baml_client degrades gracefully to
 # the SDK-only parse path instead of breaking reasoner import.
 try:
-    from swe_af.baml_bridge import baml_parse_or_none
+    from swe_af.baml_bridge import baml_output_format, baml_parse_or_none
 except Exception:  # pragma: no cover - baml client not generated / baml-py absent
     baml_parse_or_none = None  # type: ignore[assignment]
+    baml_output_format = None  # type: ignore[assignment]
 
 _PATCHED = False
+
+# When True (set from BuildConfig/ExecutionConfig.enable_baml_output_format during
+# the measured rollout), the claude/opencode prompt suffix renders the output shape
+# via BAML output_format (~85% smaller) instead of raw JSON Schema. OFF by default;
+# an unmappable schema or any render failure falls back to JSON Schema. codex is
+# never affected (it uses its native --output-schema path).
+baml_output_format_enabled: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "swe_af_baml_output_format_enabled", default=False
+)
 
 # Set by the wrapped Agent.harness for the duration of a harness call.
 # Read by the dispatching build_prompt_suffix so that claude_code / open_code
@@ -280,6 +290,25 @@ def apply_codex_harness_patch() -> None:
             returncode=returncode,
         )
 
+    def build_prompt_suffix_with_baml_output_format(schema: Any, cwd: str) -> str:
+        """claude/opencode suffix using BAML output_format instead of JSON Schema.
+
+        Same Write-tool contract as the AgentField base suffix, but the output shape
+        is the compact ``ctx.output_format`` render. Raises (caller falls back) if the
+        schema is unmappable.
+        """
+        render = baml_output_format(schema)  # may raise TypeError on unmappable schema
+        output_path = _schema.get_output_path(cwd)
+        return (
+            "\n\n---\n"
+            "CRITICAL OUTPUT REQUIREMENTS:\n"
+            f"You MUST use your Write tool to create this file: {output_path}\n"
+            "The file MUST contain ONLY valid JSON matching the schema below.\n"
+            "Do NOT output the JSON in your response text — write it to the file.\n\n"
+            f"{render}\n\n"
+            "Write ONLY valid JSON to the file. No markdown fences, no comments, no extra text."
+        )
+
     def build_prompt_suffix_dispatching(schema: Any, cwd: str) -> str:
         """Route to codex-native suffix only when the active call is for codex.
 
@@ -288,9 +317,18 @@ def apply_codex_harness_patch() -> None:
         .agentfield_output.json yourself; the Codex CLI will persist your
         final JSON response" — which is wrong for those providers and forces
         their runner into the slower stdout-parse fallback path.
+
+        For claude/opencode, when ``baml_output_format_enabled`` is set and the
+        schema is mappable, use the compact BAML output_format render; any failure
+        (unmappable schema, missing baml client) falls back to the JSON-Schema suffix.
         """
         if active_provider.get() == "codex":
             return build_prompt_suffix_with_schema_file(schema, cwd)
+        if baml_output_format_enabled.get() and baml_output_format is not None:
+            try:
+                return build_prompt_suffix_with_baml_output_format(schema, cwd)
+            except Exception:
+                pass  # unmappable / render failure → fall back to JSON Schema
         return _ORIGINAL_BUILD_PROMPT_SUFFIX(schema, cwd)
 
     # --- BAML fallback-first parse wrap ---------------------------------------

@@ -220,9 +220,32 @@ def baml_parse_or_none(text: str, schema: type[M]) -> Optional[M]:
         return None
 
 
+# Private marker fed as the ExtractDynamic `prompt` so we can split the rendered
+# request and keep only the `{{ ctx.output_format }}` section after it.
+_OUTPUT_FORMAT_MARKER = "@@SWE_AF_OUTPUT_FORMAT_MARKER@@"
+
+
+def baml_output_format(model: type[BaseModel]) -> str:
+    """Render *model*'s output-shape section via BAML's ``ctx.output_format`` (no LLM).
+
+    Uses ``b.request`` — which BUILDS the request without sending it — and splits the
+    rendered prompt on a private marker to return only the ``output_format`` section.
+    The result is materially smaller than ``json.dumps(model.model_json_schema())``:
+    BAML renders nested types inline (``{ criterion: string, … }``) instead of JSON
+    Schema's ``$defs``/``$ref``. Raises whatever ``pydantic_to_typebuilder`` raises
+    for an unmappable schema (a *required* bare ``dict``/``Any``), so callers can fall
+    back to the SDK's JSON-Schema injection. Makes **no** network/LLM call.
+    """
+    tb = pydantic_to_typebuilder(model)
+    req = b.request.ExtractDynamic(_OUTPUT_FORMAT_MARKER, baml_options={"tb": tb})
+    text = req.body.json()["messages"][0]["content"][0]["text"]
+    return text.split(_OUTPUT_FORMAT_MARKER, 1)[1].strip()
+
+
 __all__ = [
     "pydantic_to_typebuilder",
     "deserialize",
     "baml_parse",
     "baml_parse_or_none",
+    "baml_output_format",
 ]

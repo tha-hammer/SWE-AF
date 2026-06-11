@@ -707,6 +707,10 @@ class BuildConfig(BaseModel):
     enable_deterministic_checks: bool = True
     max_deterministic_check_retries: int = 2
     deterministic_check_timeout_seconds: int = 600
+    # Render reasoner output-shape sections via BAML output_format (claude/opencode
+    # prompt suffix) instead of raw JSON Schema. ~85% smaller; measured opt-in, so
+    # OFF until A/B'd. Unmappable schemas fall back to JSON Schema; codex untouched.
+    enable_baml_output_format: bool = False
     agent_max_turns: int = DEFAULT_AGENT_MAX_TURNS
     execute_fn_target: str = ""
     permission_mode: str = ""
@@ -844,6 +848,7 @@ class BuildConfig(BaseModel):
             "enable_deterministic_checks": self.enable_deterministic_checks,
             "max_deterministic_check_retries": self.max_deterministic_check_retries,
             "deterministic_check_timeout_seconds": self.deterministic_check_timeout_seconds,
+            "enable_baml_output_format": self.enable_baml_output_format,
             "agent_max_turns": self.agent_max_turns,
             "agent_timeout_seconds": self.agent_timeout_seconds,
             "max_advisor_invocations": self.max_advisor_invocations,
@@ -1014,6 +1019,7 @@ class ExecutionConfig(BaseModel):
     enable_deterministic_checks: bool = True
     max_deterministic_check_retries: int = 2
     deterministic_check_timeout_seconds: int = 600
+    enable_baml_output_format: bool = False  # mirrored from BuildConfig — see there
     agent_max_turns: int = DEFAULT_AGENT_MAX_TURNS
     permission_mode: str = ""
     agent_timeout_seconds: int = 2700  # 45 min
