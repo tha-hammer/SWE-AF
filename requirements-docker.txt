@@ -4,6 +4,8 @@
 
 agentfield>=0.1.84
 pydantic>=2.0
+# baml_client/** stays in lockstep with the runtime (generators.baml version).
+baml-py==0.222.0
 claude-agent-sdk==0.1.20
 hax-sdk>=0.2.4
 python-dotenv>=1.0
