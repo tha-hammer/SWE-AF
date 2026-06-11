@@ -7,7 +7,11 @@ Cargo > go > pyproject/setup.py > package.json > Makefile. tmp_path-driven.
 
 import pytest
 
-from swe_af.execution.deterministic_check import detect_project_commands
+from swe_af.execution.deterministic_check import (
+    ResolvedCheck,
+    detect_project_commands,
+    resolve_issue_commands,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -92,3 +96,63 @@ def test_deterministic_idempotent(tmp_path):
     first = detect_project_commands(root)
     second = detect_project_commands(root)
     assert first == second == {"build": "go build ./...", "test": "go test ./..."}
+
+
+# ---------------------------------------------------------------------------
+# Behavior 5: resolve_issue_commands (typed-first, manifest-fallback)
+# ---------------------------------------------------------------------------
+
+
+def _issue(**kw):
+    base = {"name": "lexer", "title": "Lexer", "description": "d", "acceptance_criteria": ["a"]}
+    base.update(kw)
+    return base
+
+
+def test_planned_verification_wins(tmp_path):
+    issue = _issue(verification=[{"description": "d", "command": "pytest -k lexer", "kind": "test"}])
+    resolved = resolve_issue_commands(issue, str(tmp_path))
+    assert resolved == [ResolvedCheck(command="pytest -k lexer", source="planned")]
+
+
+def test_planned_wins_over_manifest(tmp_path):
+    # A pyproject manifest is present, but the planner's typed check is more specific.
+    _write(tmp_path, "pyproject.toml", "[project]\nname='x'\n")
+    issue = _issue(verification=[{"description": "d", "command": "pytest -k lexer", "kind": "test"}])
+    resolved = resolve_issue_commands(issue, str(tmp_path))
+    assert [r.source for r in resolved] == ["planned"]
+    assert resolved[0].command == "pytest -k lexer"
+
+
+def test_manifest_fallback_when_no_verification(tmp_path):
+    root = _write(tmp_path, "pyproject.toml", "[project]\nname='x'\n")
+    resolved = resolve_issue_commands(_issue(), root)
+    assert resolved == [ResolvedCheck(command="pytest", source="manifest")]
+
+
+def test_manifest_fallback_orders_test_then_build(tmp_path):
+    root = _write(tmp_path, "go.mod", "module x\n")
+    resolved = resolve_issue_commands(_issue(), root)
+    assert resolved == [
+        ResolvedCheck(command="go test ./...", source="manifest"),
+        ResolvedCheck(command="go build ./...", source="manifest"),
+    ]
+
+
+def test_empty_when_no_verification_and_no_manifest(tmp_path):
+    assert resolve_issue_commands(_issue(), str(tmp_path)) == []
+
+
+def test_invalid_planned_commands_fall_back_to_manifest(tmp_path):
+    # Shouldn't happen post-B1, but defensively: empty/whitespace commands are
+    # treated as absent, so manifest fallback applies.
+    root = _write(tmp_path, "pyproject.toml", "[project]\nname='x'\n")
+    issue = _issue(verification=[{"description": "d", "command": "   ", "kind": "test"}])
+    resolved = resolve_issue_commands(issue, root)
+    assert resolved == [ResolvedCheck(command="pytest", source="manifest")]
+
+
+def test_resolution_is_pure_idempotent(tmp_path):
+    root = _write(tmp_path, "pyproject.toml", "[project]\nname='x'\n")
+    issue = _issue(verification=[{"description": "d", "command": "pytest -q", "kind": "test"}])
+    assert resolve_issue_commands(issue, root) == resolve_issue_commands(issue, root)

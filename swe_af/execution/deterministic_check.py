@@ -95,6 +95,50 @@ def detect_project_commands(worktree_path: str) -> dict[str, str]:
 
 
 @dataclass(frozen=True)
+class ResolvedCheck:
+    """A command the rung will run, tagged with where it came from.
+
+    ``source`` is ``"planned"`` (a typed ``AcceptanceCheck`` the planner authored)
+    or ``"manifest"`` (the deterministic project-level fallback).
+    """
+
+    command: str
+    source: str
+
+
+def resolve_issue_commands(issue: dict, worktree_path: str) -> list[ResolvedCheck]:
+    """Resolve the checks to run for *issue*, typed-first then manifest-fallback.
+
+    Resolution order (pure function of ``(issue, worktree contents)``):
+      1. Typed planner checks — ``issue["verification"][*].command`` (each with a
+         non-empty command) → ``source="planned"``. Present-and-valid planned checks
+         win outright; the manifest is ignored, honoring per-issue specificity (a
+         targeted ``pytest -k lexer`` beats a whole-suite ``pytest``).
+      2. Else the manifest fallback from ``detect_project_commands`` — the ``test``
+         command then the ``build`` command → ``source="manifest"``.
+      3. Else ``[]`` — the rung is skipped.
+
+    Whitespace/empty planned commands (Behavior 1 should preclude these) are treated
+    as absent, so a degenerate ``verification`` block falls back to the manifest.
+    """
+    verification = issue.get("verification") or []
+    planned = [
+        ResolvedCheck(command=entry["command"], source="planned")
+        for entry in verification
+        if isinstance(entry, dict) and str(entry.get("command") or "").strip()
+    ]
+    if planned:
+        return planned
+
+    commands = detect_project_commands(worktree_path)
+    return [
+        ResolvedCheck(command=commands[kind], source="manifest")
+        for kind in ("test", "build")
+        if commands.get(kind)
+    ]
+
+
+@dataclass(frozen=True)
 class CheckResult:
     """Outcome of running one deterministic check command.
 
