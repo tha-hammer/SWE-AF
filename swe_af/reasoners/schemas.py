@@ -134,6 +134,7 @@ class PlannedIssue(BaseModel):
     testing_strategy: str = ""  # Test file paths, framework, coverage expectations
     sequence_number: int | None = None  # Assigned after topo sort, used in file/branch naming
     guidance: IssueGuidance | None = None  # Per-issue guidance from sprint planner
+    verification: list[AcceptanceCheck] = []  # Runnable checks for the deterministic rung
     target_repo: str = ""  # Target repository for multi-repo builds (empty = default/only repo)
 
 
