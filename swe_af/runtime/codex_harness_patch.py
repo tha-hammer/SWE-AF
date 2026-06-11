@@ -7,6 +7,16 @@ import os
 from pathlib import Path
 from typing import Any
 
+# BAML Schema-Aligned Parser fallback. Imported at module scope so the wrapped
+# try_parse_from_text resolves it as a module global — tests spy on
+# ``codex_harness_patch.baml_parse_or_none`` (the SAME bound name the wrapper
+# invokes). Guarded so a missing/ungenerated baml_client degrades gracefully to
+# the SDK-only parse path instead of breaking reasoner import.
+try:
+    from swe_af.baml_bridge import baml_parse_or_none
+except Exception:  # pragma: no cover - baml client not generated / baml-py absent
+    baml_parse_or_none = None  # type: ignore[assignment]
+
 _PATCHED = False
 
 # Set by the wrapped Agent.harness for the duration of a harness call.
@@ -18,6 +28,7 @@ active_provider: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 )
 
 _ORIGINAL_BUILD_PROMPT_SUFFIX: Any = None
+_ORIGINAL_TRY_PARSE_FROM_TEXT: Any = None
 
 
 def _codex_strict_json_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -103,7 +114,7 @@ async def _run_codex_cli_with_stdin(
 
 
 def apply_codex_harness_patch() -> None:
-    global _PATCHED, _ORIGINAL_BUILD_PROMPT_SUFFIX
+    global _PATCHED, _ORIGINAL_BUILD_PROMPT_SUFFIX, _ORIGINAL_TRY_PARSE_FROM_TEXT
     if _PATCHED:
         return
     try:
@@ -282,6 +293,21 @@ def apply_codex_harness_patch() -> None:
             return build_prompt_suffix_with_schema_file(schema, cwd)
         return _ORIGINAL_BUILD_PROMPT_SUFFIX(schema, cwd)
 
+    # --- BAML fallback-first parse wrap ---------------------------------------
+    # Run the SDK's 3-strategy try_parse_from_text first; only on its None does
+    # BAML's Schema-Aligned Parser get a shot. The happy path stays byte-identical.
+    _ORIGINAL_TRY_PARSE_FROM_TEXT = _runner.try_parse_from_text
+
+    def try_parse_from_text_fallback_first(text: Any, schema: Any) -> Any:
+        result = _ORIGINAL_TRY_PARSE_FROM_TEXT(text, schema)
+        if result is not None:
+            return result
+        # Module-global lookup at call time so tests can spy on
+        # codex_harness_patch.baml_parse_or_none (the bound name used here).
+        if baml_parse_or_none is None:
+            return None
+        return baml_parse_or_none(text, schema)
+
     _orig_agent_harness = Agent.harness
 
     async def _harness_with_provider_context(
@@ -296,6 +322,12 @@ def apply_codex_harness_patch() -> None:
 
     _schema.build_prompt_suffix = build_prompt_suffix_dispatching
     _runner.build_prompt_suffix = build_prompt_suffix_dispatching
+    # Assign the BAML wrap to BOTH bindings. _runner.try_parse_from_text is the
+    # load-bearing one: _runner.py imported the symbol by name, so the live call
+    # sites (_runner.py:141,355,466) bind the _runner module reference, NOT
+    # _schema's. Patching _schema alone would be a no-op for the parse path.
+    _runner.try_parse_from_text = try_parse_from_text_fallback_first
+    _schema.try_parse_from_text = try_parse_from_text_fallback_first
     CodexProvider.execute = execute_with_native_structured_output
     Agent.harness = _harness_with_provider_context
     _PATCHED = True
