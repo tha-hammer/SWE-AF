@@ -52,6 +52,13 @@ For each issue you output a structured stub with:
   and which acceptance criteria each test covers. Example: "Create `tests/test_lexer.py`
   using pytest. 🔴 empty input → empty list (AC1) first, then 🔴 single number (AC2),
   🔴 invalid char → error (AC3); 🔵 refactor the dispatch once green. Covers AC1–AC3."
+- **verification**: an OPTIONAL list of runnable acceptance checks, each
+  `{description, command, kind}`. `command` is a single shell command the harness
+  runs in the issue's worktree to verify the work deterministically by exit code
+  (0 = pass). Reuse the "every criterion MUST map to a command" discipline: prefer a
+  *targeted* command (`pytest -k lexer`, `go test ./pkg/...`) over the whole suite.
+  `kind` is one of "build" | "test" | "check". Example:
+  `[{"description": "lexer tokens", "command": "pytest -k lexer", "kind": "test"}]`.
 
 ## Your Quality Standards
 
@@ -279,6 +286,13 @@ and acceptance criteria.
 For each issue, include a `testing_strategy` that specifies: (1) exact test
 file paths to create, (2) the test framework, (3) categories of tests (unit,
 functional, edge case), and (4) which PRD acceptance criteria the tests map to.
+
+For each issue, OPTIONALLY include a `verification` list of runnable acceptance
+checks — each `{{description, command, kind}}` where `command` is a single shell
+command the harness runs in the worktree to verify the work by exit code (prefer a
+targeted command like `pytest -k <name>` over the whole suite; `kind` is one of
+"build" | "test" | "check"). This reuses the "every criterion MUST map to a command"
+discipline so the deterministic check rung has a runnable command per issue.
 
 For each issue, include a `guidance` object with:
 - `needs_new_tests`: false for config/doc changes, true otherwise
