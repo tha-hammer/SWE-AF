@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 
 import pytest
-from agentfield.harness._schema import try_parse_from_text
+import agentfield.harness._schema as _schema
 
 from swe_af.baml_bridge import baml_parse, baml_parse_or_none
 from swe_af.execution.schemas import ReplanDecision, RetryAdvice
@@ -21,6 +21,21 @@ from swe_af.execution.schemas import ReplanDecision, RetryAdvice
 pytestmark = pytest.mark.unit
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def sdk_try_parse(text, schema):
+    """The raw SDK ladder, immune to the BAML seam's monkeypatch.
+
+    apply_codex_harness_patch() reassigns _schema.try_parse_from_text to the
+    fallback-first wrapper whenever swe_af.reasoners is imported (which happens in
+    a full-suite run). Calling the saved original keeps this oracle measuring the
+    SDK alone, so the "SDK drops it / BAML rescues it" contract is genuine in both
+    isolated and full-suite runs.
+    """
+    from swe_af.runtime import codex_harness_patch
+
+    original = codex_harness_patch._ORIGINAL_TRY_PARSE_FROM_TEXT
+    return (original or _schema.try_parse_from_text)(text, schema)
 
 # Hand-authored oracle for the messy fixture — NOT derived from baml output.
 EXPECTED_MESSY = RetryAdvice(
@@ -35,7 +50,7 @@ EXPECTED_MESSY = RetryAdvice(
 def test_baml_beats_sdk_ladder_on_messy_fixture():
     text = (FIXTURES / "messy_cli_output_retry_advice.txt").read_text()
     # Dual oracle: the SDK's 3-strategy ladder drops this input.
-    assert try_parse_from_text(text, RetryAdvice) is None
+    assert sdk_try_parse(text, RetryAdvice) is None
     # BAML parses it to the correct typed object.
     assert baml_parse(text, RetryAdvice) == EXPECTED_MESSY
 
@@ -65,7 +80,7 @@ def test_recoverable_malformed_sdk_none_baml_parses():
         "{'should_retry': True, 'diagnosis': 'flaky', 'strategy': 'rerun', "
         "'modified_context': 'none', 'confidence': 0.6}"
     )
-    assert try_parse_from_text(text, RetryAdvice) is None  # SDK can't fix quotes
+    assert sdk_try_parse(text, RetryAdvice) is None  # SDK can't fix quotes
     got = baml_parse(text, RetryAdvice)
     assert got.should_retry is True
     assert got.diagnosis == "flaky"
@@ -94,7 +109,7 @@ REAL_CAPTURE_LOGS = (
 @pytest.mark.parametrize("fixture_path", RETRY_ADVICE_CORPUS, ids=lambda p: p.name)
 def test_corpus_sdk_drops_but_baml_parses(fixture_path):
     text = fixture_path.read_text()
-    assert try_parse_from_text(text, RetryAdvice) is None
+    assert sdk_try_parse(text, RetryAdvice) is None
     parsed = baml_parse(text, RetryAdvice)
     assert isinstance(parsed, RetryAdvice)
     assert isinstance(parsed.should_retry, bool)
@@ -133,6 +148,6 @@ def test_real_capture_baml_declines_without_crash():
     for log in REAL_CAPTURE_LOGS:
         for text in _captured_error_texts(log):
             seen += 1
-            assert try_parse_from_text(text, ReplanDecision) is None
+            assert sdk_try_parse(text, ReplanDecision) is None
             assert baml_parse_or_none(text, ReplanDecision) is None
     assert seen > 0, "expected at least one captured API-error payload"

@@ -13,7 +13,6 @@ Two parse helpers with deliberately different failure contracts:
 
 from __future__ import annotations
 
-import json
 import types
 import typing
 from enum import Enum
