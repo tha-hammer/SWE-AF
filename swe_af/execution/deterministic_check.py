@@ -11,6 +11,20 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+
+from swe_af.execution._proc import _tail
+
+# Default per-check timeout (seconds). Load-bearing: ci_gate has no per-subprocess
+# timeout to inherit, so without this a hung command (cold-worktree pytest blocked
+# on the network, a watch-mode runner) would stall the build forever. Overridable
+# per call and via the deterministic_check_timeout_seconds config knob (Behavior 6).
+DET_CHECK_TIMEOUT_SECONDS: int = 600
+
+# Injectable runner contract — identical to ci_gate.CommandRunner: argv list + cwd.
+LocalRunner = Callable[[Sequence[str], str], "subprocess.CompletedProcess[str]"]
 
 # A Makefile target line for the conventional ``test`` target: "test:" / "test :"
 # (optionally with prerequisites). Anchored at line start so "pytest:" / "test_x:"
@@ -78,3 +92,66 @@ def detect_project_commands(worktree_path: str) -> dict[str, str]:
             if os.path.isfile(candidate):
                 return builder(candidate)
     return {}
+
+
+@dataclass(frozen=True)
+class CheckResult:
+    """Outcome of running one deterministic check command.
+
+    ``passed`` is exactly ``exit_code == 0``. ``exit_code`` is ``-1`` for a
+    timeout / OS error (the command never produced a real exit code).
+    """
+
+    passed: bool
+    exit_code: int
+    output_tail: str
+
+
+def _default_local_runner(
+    cmd: Sequence[str], cwd: str, timeout: float = DET_CHECK_TIMEOUT_SECONDS
+) -> "subprocess.CompletedProcess[str]":
+    """Real runner: ``shell=False`` (the pipeline is interpreted by ``bash -c``)."""
+    return subprocess.run(
+        list(cmd),
+        cwd=cwd or None,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=timeout,
+    )
+
+
+def run_local_check(
+    command: str,
+    cwd: str,
+    runner: LocalRunner | None = None,
+    timeout: float = DET_CHECK_TIMEOUT_SECONDS,
+) -> CheckResult:
+    """Run *command* in *cwd* and return a ``CheckResult`` (passed iff exit 0).
+
+    The command is wrapped as the argv ``["bash", "-c", command]`` so shell
+    pipelines (``| jq``, ``>``, ``&&``) run while keeping ``shell=False`` — the same
+    trust boundary as the agent's own Bash (worktree + container). The default
+    runner enforces *timeout*; a ``TimeoutExpired``/``OSError`` becomes a red
+    ``CheckResult(exit_code=-1)`` so a hung command cannot stall the build. An empty
+    command (Behavior 1's validator blocks it upstream) is a defensive red and never
+    reaches the runner.
+    """
+    if not command.strip():
+        return CheckResult(passed=False, exit_code=-1, output_tail="empty command")
+
+    argv: list[str] = ["bash", "-c", command]
+    try:
+        if runner is None:
+            completed = _default_local_runner(argv, cwd, timeout)
+        else:
+            completed = runner(argv, cwd)
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return CheckResult(passed=False, exit_code=-1, output_tail=_tail(str(exc) or "timeout"))
+
+    output = (completed.stdout or "") + (completed.stderr or "")
+    return CheckResult(
+        passed=completed.returncode == 0,
+        exit_code=completed.returncode,
+        output_tail=_tail(output),
+    )
