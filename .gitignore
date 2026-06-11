@@ -50,3 +50,11 @@ build/
 
 # Pipeline output files
 .claude_output_*.json
+
+# Secrets — never commit
+swe_af/claudeAiOauth-accessToken.json
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
