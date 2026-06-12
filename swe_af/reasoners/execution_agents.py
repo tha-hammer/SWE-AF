@@ -7,6 +7,7 @@ visible in the AgentField call graph when invoked via ``app.call()``.
 from __future__ import annotations
 
 import os
+import subprocess
 
 from pydantic import BaseModel
 
@@ -595,6 +596,40 @@ async def run_verifier(
 # ---------------------------------------------------------------------------
 
 
+def _detect_existing_repo(repo_path: str) -> tuple[str, str] | None:
+    """If ``repo_path`` is already a git repo with at least one commit, return
+    ``(head_sha, branch)``; otherwise ``None``.
+
+    Used to hard-guard ``run_git_init`` against re-initializing (``git init``)
+    a repository that already has history — which silently destroys it.
+    """
+    try:
+        if (
+            subprocess.run(
+                ["git", "-C", repo_path, "rev-parse", "--git-dir"],
+                capture_output=True, text=True, timeout=15,
+            ).returncode
+            != 0
+        ):
+            return None  # not a git repo (genuine fresh folder)
+        head = subprocess.run(
+            ["git", "-C", repo_path, "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if head.returncode != 0 or not head.stdout.strip():
+            return None  # repo exists but has no commits yet — fresh-ish, safe
+        branch = subprocess.run(
+            ["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=15,
+        )
+        return head.stdout.strip(), branch.stdout.strip()
+    except Exception:
+        # If we cannot determine state, fail safe: treat as existing so the
+        # agent is constrained away from `git init` (worst case: a fresh folder
+        # gets a harmless extra constraint it can ignore).
+        return ("unknown", "unknown")
+
+
 @router.reasoner()
 async def run_git_init(
     repo_path: str,
@@ -623,6 +658,23 @@ async def run_git_init(
     task_prompt = git_init_task_prompt(
         repo_path=repo_path, goal=goal, build_id=build_id
     )
+
+    # GUARD (pre): detect a pre-existing repo with history so the agent cannot
+    # misclassify it as a "fresh folder" and run `git init`, which destroys the
+    # existing history (observed: an existing repo got re-initialized to a new
+    # `main` + "Initial commit", abandoning the real branch/remote/history).
+    existing_repo = _detect_existing_repo(repo_path)
+    if existing_repo is not None:
+        _head, _branch = existing_repo
+        task_prompt += (
+            "\n\n## ⚠️ PRE-DETECTED: EXISTING REPOSITORY — HARD CONSTRAINT\n"
+            f"This path is ALREADY a git repository with history "
+            f"(HEAD={_head[:12]} on branch '{_branch}'). You MUST take the "
+            "**Existing Repository** path: create the integration branch FROM "
+            "the current HEAD. You are FORBIDDEN from running `git init`, "
+            "`rm -rf .git`, or any command that discards existing history. "
+            "Treating this as a fresh folder is a critical failure."
+        )
 
     # Build system prompt with error context if retrying
     system_prompt = GIT_INIT_SYSTEM_PROMPT
@@ -653,6 +705,37 @@ async def run_git_init(
         )
         check_fatal_harness_error(result)
         if result.parsed is not None:
+            # GUARD (post): if a repo with real history existed, verify it
+            # survived. If the original HEAD is no longer reachable, the agent
+            # re-initialized the repo despite the constraint — fail loudly
+            # instead of returning success on a clobbered repository, so the
+            # build stops here rather than layering work onto destroyed history.
+            if existing_repo is not None and existing_repo[0] != "unknown":
+                orig_head = existing_repo[0]
+                survived = subprocess.run(
+                    ["git", "-C", repo_path, "cat-file", "-e", orig_head],
+                    capture_output=True, text=True, timeout=15,
+                ).returncode == 0
+                if not survived:
+                    router.note(
+                        f"Git init GUARD TRIPPED: original HEAD {orig_head[:12]} "
+                        "is no longer reachable — the repository was "
+                        "re-initialized, destroying history. Aborting build.",
+                        tags=["git_init", "guard", "error"],
+                    )
+                    return GitInitResult(
+                        mode="unknown",
+                        original_branch=existing_repo[1],
+                        integration_branch="",
+                        initial_commit_sha="",
+                        success=False,
+                        error_message=(
+                            "git_init GUARD: pre-existing history (HEAD "
+                            f"{orig_head}) was destroyed — the repository at "
+                            f"'{repo_path}' was re-initialized. Aborting to "
+                            "protect the repository; do not build on this state."
+                        ),
+                    ).model_dump()
             router.note(
                 f"Git init complete: mode={result.parsed.mode}, "
                 f"integration_branch={result.parsed.integration_branch}",
