@@ -502,6 +502,43 @@ class TestCodingLoopIntegration(unittest.TestCase):
         self.assertIn("Coder agent failed", result.error_message)
         self.assertEqual(result.attempts, 1)
 
+    # -- Scenario 8b: Reviewer crash on empty work → FAILED, never false-green --
+
+    def test_reviewer_crash_on_empty_work_does_not_false_green(self):
+        """A crashed reviewer must NOT be recorded as an approval.
+
+        Regression for the false-green bug: a coding loop where the coder
+        produces nothing and the reviewer crashes (e.g. sandbox/bwrap failure)
+        must end FAILED_UNRECOVERABLE — not COMPLETED — and no iteration may
+        record review_approved=True for a reviewer that never produced a verdict.
+        """
+
+        def call_fn(agent_name: str, **kwargs):
+            async def _invoke():
+                if "run_coder" in agent_name:
+                    return {"files_changed": [], "summary": "No changes", "complete": True}
+                if "run_code_reviewer" in agent_name:
+                    raise RuntimeError("bwrap: No permissions to create a new namespace")
+                return {}
+            return _invoke()
+
+        result = _run(run_coding_loop(
+            issue=_make_issue(),  # default path — reviewer is sole gatekeeper
+            dag_state=_make_dag_state(self.artifacts_dir),
+            call_fn=call_fn,
+            node_id="test-node",
+            config=_make_config(),
+            note_fn=self._note_fn,
+        ))
+
+        self.assertEqual(result.outcome, IssueOutcome.FAILED_UNRECOVERABLE)
+        self.assertNotEqual(result.outcome, IssueOutcome.COMPLETED)
+        # The crash must never be rubber-stamped as an approval.
+        self.assertTrue(
+            all(h["review_approved"] is False for h in result.iteration_history),
+            f"reviewer crash recorded as approval: {result.iteration_history}",
+        )
+
     # -- Scenario 9: Flagged path — synthesizer detects stuck --
 
     def test_flagged_path_synthesizer_stuck(self):
