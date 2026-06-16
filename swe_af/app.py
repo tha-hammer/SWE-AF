@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import os
 import subprocess
+import time
 import uuid
 
 from dotenv import load_dotenv
@@ -453,6 +454,142 @@ async def _create_hax_request_with_timeout(
         tags=["build", "approval", "hax", "submitted"],
     )
     return hax_request
+
+
+def _dump_main_dag_result(artifacts_dir: str, dag_result: dict) -> None:
+    """Forensic snapshot of the main DAG result before the verify/fix loop can
+    overwrite the in-memory dag_result (see the verify loop in build())."""
+    if not artifacts_dir:
+        return
+    import json
+    path = os.path.join(artifacts_dir, "execution", "main-dag-result.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(dag_result, f, indent=2, default=str)
+
+
+def _failing_criteria(verification: dict) -> list[dict]:
+    """The still-failing criterion dicts from a verification result."""
+    return [
+        c for c in verification.get("criteria_results", [])
+        if not c.get("passed", True)
+    ]
+
+
+def _failed_criteria_signature(failed_criteria: list[dict]) -> frozenset:
+    """Order-independent identity of a failed-criteria set for convergence."""
+    return frozenset(c.get("criterion", "") for c in failed_criteria)
+
+
+def _criteria_to_debt(failed_criteria: list[dict]) -> list[dict]:
+    """Map still-failing criteria to accumulated-debt entries (accept-partial)."""
+    return [
+        {"type": "unmet_acceptance_criterion",
+         "criterion": c.get("criterion", ""),
+         "reason": c.get("evidence", ""),
+         "severity": "high"}
+        for c in failed_criteria
+    ]
+
+
+def _record_criteria_debt(dag_result: dict, failed_criteria: list[dict]) -> None:
+    """Append still-failing criteria as debt, deduping by ``criterion`` string."""
+    debt = dag_result.setdefault("accumulated_debt", [])
+    seen = {d.get("criterion", "") for d in debt}
+    for item in _criteria_to_debt(failed_criteria):
+        if item["criterion"] in seen:
+            continue
+        debt.append(item)
+        seen.add(item["criterion"])
+
+
+def _within_soft_deadline(elapsed: float, budget_seconds: int) -> bool:
+    """True if a fix cycle may still start. budget 0 disables the check."""
+    return budget_seconds <= 0 or elapsed < budget_seconds
+
+
+def _debt_severity(debt: dict) -> str:
+    return str(debt.get("severity", "")).strip().lower()
+
+
+def _has_accumulated_debt(dag_result: dict) -> bool:
+    return bool(dag_result.get("accumulated_debt", []))
+
+
+def _has_high_severity_debt(dag_result: dict) -> bool:
+    high_values = {"p0", "p1", "critical", "blocker", "high"}
+    return any(
+        _debt_severity(debt) in high_values
+        for debt in dag_result.get("accumulated_debt", [])
+        if isinstance(debt, dict)
+    )
+
+
+def _pr_expected(
+    *,
+    cfg: BuildConfig,
+    manifest: WorkspaceManifest | None,
+    git_config: dict | None,
+) -> bool:
+    if not cfg.enable_github_pr:
+        return False
+    if manifest and len(manifest.repos) > 1:
+        for ws_repo in manifest.repos:
+            if not ws_repo.create_pr:
+                continue
+            repo_git_init = ws_repo.git_init_result or {}
+            if (
+                (repo_git_init.get("remote_url", "") or ws_repo.repo_url)
+                and repo_git_init.get("integration_branch", "")
+            ):
+                return True
+        return False
+    return bool(git_config and git_config.get("remote_url"))
+
+
+def _has_successful_pr(pr_results: list[RepoPRResult]) -> bool:
+    return any(r.success and r.pr_url for r in pr_results)
+
+
+def _execution_status(verification: dict | None, dag_result: dict) -> str:
+    verification_passed = verification.get("passed", False) if verification else False
+    if dag_result.get("failed_issues"):
+        return "failed"
+    if _has_high_severity_debt(dag_result) or _has_accumulated_debt(dag_result):
+        return "completed_with_debt"
+    if verification_passed:
+        return "completed"
+    return "failed"
+
+
+def _final_build_status(
+    *,
+    verification: dict | None,
+    dag_result: dict,
+    pr_results: list[RepoPRResult],
+    pr_expected: bool,
+) -> str:
+    if pr_expected and not _has_successful_pr(pr_results):
+        return "failed"
+    return _execution_status(verification, dag_result)
+
+
+def _build_summary(
+    *,
+    status: str,
+    completed: int,
+    total: int,
+    verification: dict | None,
+) -> str:
+    label = {
+        "completed": "Completed",
+        "completed_with_debt": "Completed with debt",
+        "failed": "Failed",
+    }.get(status, "Failed")
+    summary = f"{label}: {completed}/{total} issues completed"
+    if verification:
+        summary += f", verification: {verification.get('summary', '')}"
+    return summary
 
 
 @app.reasoner()
@@ -947,8 +1084,16 @@ async def build(
         if manifest and dag_result.get("workspace_manifest"):
             manifest = WorkspaceManifest(**dag_result["workspace_manifest"])
 
+        # Forensic snapshot of the main DAG result before the verify/fix loop can
+        # overwrite dag_result with fix-execution results (see _dump_main_dag_result).
+        _dump_main_dag_result(plan_result.get("artifacts_dir", artifacts_dir), dag_result)
+
         # 3. VERIFY
         verification = None
+        verify_loop_start = time.monotonic()
+        prior_failed_signature: frozenset | None = None
+        prior_failed_criteria: list[dict] = []   # cross-cycle history (deduped)
+        seen_prior_criteria: set[str] = set()
         for cycle in range(cfg.max_verify_fix_cycles + 1):
             app.note(f"Verification cycle {cycle}", tags=["build", "verify"])
             verification = _unwrap(await app.call(
@@ -965,18 +1110,32 @@ async def build(
                 workspace_manifest=manifest.model_dump() if manifest else None,
             ), "run_verifier")
 
-            if verification.get("passed", False) or cycle >= cfg.max_verify_fix_cycles:
+            if verification.get("passed", False):
                 break
 
-            # Verification failed — generate targeted fix issues
-            failed_criteria = [
-                c for c in verification.get("criteria_results", [])
-                if not c.get("passed", True)
-            ]
+            # Verification failed — the still-failing criteria for this cycle.
+            failed_criteria = _failing_criteria(verification)
+
+            # Cycle-cap reached: accept-partial, record remaining criteria as debt.
+            if cycle >= cfg.max_verify_fix_cycles:
+                _record_criteria_debt(dag_result, failed_criteria)
+                break
 
             if not failed_criteria:
                 app.note("Verification failed but no specific criteria failures found", tags=["build", "verify"])
                 break
+
+            # Convergence: an identical failing set to the prior cycle means fixing
+            # is not making progress — stop and accept-partial.
+            signature = _failed_criteria_signature(failed_criteria)
+            if prior_failed_signature is not None and signature == prior_failed_signature:
+                app.note(
+                    "Verification converged (same criteria failing) — accepting with debt",
+                    tags=["build", "verify", "converged"],
+                )
+                _record_criteria_debt(dag_result, failed_criteria)
+                break
+            prior_failed_signature = signature
 
             app.note(
                 f"Verification failed ({len(failed_criteria)} criteria), "
@@ -984,7 +1143,8 @@ async def build(
                 tags=["build", "verify", "retry"],
             )
 
-            # Generate fix issues from failed criteria
+            # Generate fix issues from failed criteria, with prior-cycle history so
+            # repeatedly-failing criteria can be recorded as debt by the generator.
             fix_result = _unwrap(await app.call(
                 f"{NODE_ID}.generate_fix_issues",
                 failed_criteria=failed_criteria,
@@ -995,7 +1155,15 @@ async def build(
                 permission_mode=cfg.permission_mode,
                 ai_provider=cfg.ai_provider,
                 workspace_manifest=manifest.model_dump() if manifest else None,
+                previously_failed_criteria=list(prior_failed_criteria),
             ), "generate_fix_issues")
+
+            # Accumulate this cycle's failures as history for the next cycle (deduped).
+            for c in failed_criteria:
+                k = c.get("criterion", "")
+                if k not in seen_prior_criteria:
+                    seen_prior_criteria.add(k)
+                    prior_failed_criteria.append(c)
 
             fix_issues = fix_result.get("fix_issues", [])
             fix_debt = fix_result.get("debt_items", [])
@@ -1008,6 +1176,16 @@ async def build(
                     "reason": debt.get("reason", ""),
                     "severity": debt.get("severity", "high"),
                 })
+
+            # Between-cycles soft deadline: do not launch another fix DAG once the
+            # budget is exhausted. This never interrupts an in-flight fix DAG — it
+            # gates the *start* of one. The first cycle (elapsed ≈ 0) is never gated.
+            if not _within_soft_deadline(time.monotonic() - verify_loop_start,
+                                         cfg.verify_fix_soft_deadline_seconds):
+                app.note("Verify/fix soft deadline reached — accepting with debt",
+                         tags=["build", "verify", "deadline"])
+                _record_criteria_debt(dag_result, failed_criteria)
+                break
 
             if fix_issues:
                 # Build a mini plan from fix issues and execute them
@@ -1028,18 +1206,21 @@ async def build(
                     config=exec_config,
                     git_config=git_config,
                     workspace_manifest=manifest.model_dump() if manifest else None,
+                    checkpoint_label=f"fix-{cycle + 1}",
                 ), "execute_fixes")
                 continue  # Re-verify
             else:
                 app.note("No fixable issues generated — accepting with debt", tags=["build", "verify"])
+                _record_criteria_debt(dag_result, failed_criteria)
                 break
 
-        success = verification.get("passed", False) if verification else False
         completed = len(dag_result.get("completed_issues", []))
         total = len(dag_result.get("all_issues", []))
+        execution_status = _execution_status(verification, dag_result)
+        success = execution_status == "completed"
 
         app.note(
-            f"Build {'succeeded' if success else 'completed with issues'}: "
+            f"Build {execution_status}: "
             f"{completed}/{total} issues, verification={'passed' if success else 'failed'}",
             tags=["build", "complete"],
         )
@@ -1125,9 +1306,11 @@ async def build(
         # 4. PUSH & DRAFT PR (if repo has a remote and PR creation is enabled)
         pr_results: list[RepoPRResult] = []
         ci_gate_results: list[dict] = []
-        build_summary = (
-            f"{'Success' if success else 'Partial'}: {completed}/{total} issues completed"
-            + (f", verification: {verification.get('summary', '')}" if verification else "")
+        build_summary = _build_summary(
+            status=execution_status,
+            completed=completed,
+            total=total,
+            verification=verification,
         )
 
         if manifest and len(manifest.repos) > 1:
@@ -1326,13 +1509,31 @@ async def build(
             except Exception:
                 pass  # non-blocking
 
+        pr_expected = _pr_expected(cfg=cfg, manifest=manifest, git_config=git_config)
+        final_status = _final_build_status(
+            verification=verification,
+            dag_result=dag_result,
+            pr_results=pr_results,
+            pr_expected=pr_expected,
+        )
+        if pr_expected and final_status == "failed" and not _has_successful_pr(pr_results):
+            app.note(
+                "Build failed: PR creation was expected but no PR URL was produced",
+                tags=["build", "github_pr", "missing_pr", "error"],
+            )
+
         return BuildResult(
             plan_result=plan_result,
             dag_state=dag_result,
             verification=verification,
-            success=success,
-            summary=f"{'Success' if success else 'Partial'}: {completed}/{total} issues completed"
-                    + (f", verification: {verification.get('summary', '')}" if verification else ""),
+            success=final_status == "completed",
+            status=final_status,
+            summary=_build_summary(
+                status=final_status,
+                completed=completed,
+                total=total,
+                verification=verification,
+            ),
             pr_results=pr_results,
             ci_gate_results=ci_gate_results,
         ).model_dump()
@@ -1549,6 +1750,7 @@ async def execute(
     resume: bool = False,
     build_id: str = "",
     workspace_manifest: dict | None = None,
+    checkpoint_label: str = "",
 ) -> dict:
     """Execute a planned DAG with self-healing replanning.
 
@@ -1595,6 +1797,7 @@ async def execute(
         resume=resume,
         build_id=build_id,
         workspace_manifest=workspace_manifest,
+        checkpoint_label=checkpoint_label,
     )
     return state.model_dump()
 

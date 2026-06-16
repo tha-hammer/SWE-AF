@@ -11,7 +11,7 @@ from typing import Callable
 
 from swe_af.execution.dag_utils import apply_replan, find_downstream
 from swe_af.execution.envelope import unwrap_call_result
-from swe_af.execution.fatal_error import FatalHarnessError
+from swe_af.execution.fatal_error import FatalHarnessError, is_fatal_error
 from swe_af.execution.schemas import (
     AdvisorAction,
     DAGState,
@@ -680,16 +680,51 @@ async def _init_all_repos(
 # ---------------------------------------------------------------------------
 
 
-def _checkpoint_path(dag_state: DAGState) -> str:
-    """Return the path to the checkpoint file, or empty string if no artifacts_dir."""
-    return os.path.join(dag_state.artifacts_dir, "execution", "checkpoint.json") if dag_state.artifacts_dir else ""
+def _checkpoint_path(dag_state: DAGState, label: str = "") -> str:
+    """Return the path to the checkpoint file, or empty string if no artifacts_dir.
+
+    ``label`` namespaces the file: empty → ``checkpoint.json`` (default, today's
+    behavior); non-empty ``fix-1`` → ``checkpoint-fix-1.json``. Fix-DAGs use a
+    label so they never stomp the main DAG's ``checkpoint.json``.
+    """
+    if not dag_state.artifacts_dir:
+        return ""
+    name = "checkpoint.json" if not label else f"checkpoint-{label}.json"
+    return os.path.join(dag_state.artifacts_dir, "execution", name)
 
 
-def _save_checkpoint(dag_state: DAGState, note_fn: Callable | None = None) -> None:
+def _existing_checkpoint_meta(path: str) -> tuple[int, str] | None:
+    """(issue_count, build_id) of an on-disk checkpoint, or None if absent/unreadable."""
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return len(data.get("all_issues", [])), data.get("build_id", "")
+    except (json.JSONDecodeError, OSError):
+        return None  # fail-open: let the caller overwrite
+
+
+def _save_checkpoint(dag_state: DAGState, note_fn: Callable | None = None, label: str = "") -> None:
     """Persist DAGState to a checkpoint file for crash recovery."""
-    path = _checkpoint_path(dag_state)
+    path = _checkpoint_path(dag_state, label)
     if not path:
         return
+    meta = _existing_checkpoint_meta(path)
+    if meta is not None:
+        existing_count, existing_build_id = meta
+        # Refuse to shrink ONLY within the same build. A different build_id means a
+        # stale checkpoint from a previous build sharing a reused artifacts_dir —
+        # fail open and overwrite (no cross-build regression). See Behavior 1.
+        if existing_build_id == dag_state.build_id and len(dag_state.all_issues) < existing_count:
+            if note_fn:
+                note_fn(
+                    f"Checkpoint write skipped: current {len(dag_state.all_issues)} "
+                    f"issues < existing {existing_count} for build {dag_state.build_id!r} "
+                    f"(refusing to shrink)",
+                    tags=["execution", "checkpoint", "guard"],
+                )
+            return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump(dag_state.model_dump(), f, indent=2, default=str)
@@ -1239,6 +1274,33 @@ def _enrich_downstream_with_failure_notes(
     return dag_state
 
 
+def _fatal_provider_failures(failed: list[IssueResult]) -> list[IssueResult]:
+    """Failures caused by non-retryable provider/API errors."""
+    fatal: list[IssueResult] = []
+    for result in failed:
+        combined = "\n".join(
+            part
+            for part in (result.error_message, result.error_context)
+            if part
+        )
+        if is_fatal_error(combined):
+            fatal.append(result)
+    return fatal
+
+
+def _skip_unfinished_issues(dag_state: DAGState) -> DAGState:
+    """Mark every not-yet-terminal issue skipped after a systemic abort."""
+    terminal = {r.issue_name for r in dag_state.completed_issues}
+    terminal.update(r.issue_name for r in dag_state.failed_issues)
+    terminal.update(dag_state.skipped_issues)
+    for issue in dag_state.all_issues:
+        name = issue.get("name", "")
+        if name and name not in terminal:
+            dag_state.skipped_issues.append(name)
+            terminal.add(name)
+    return dag_state
+
+
 async def _invoke_replanner_via_call(
     dag_state: DAGState,
     unrecoverable: list[IssueResult],
@@ -1361,6 +1423,7 @@ async def run_dag(
     resume: bool = False,
     build_id: str = "",
     workspace_manifest: dict | None = None,
+    checkpoint_label: str = "",
 ) -> DAGState:
     """Execute a planned DAG with self-healing replanning.
 
@@ -1433,7 +1496,7 @@ async def run_dag(
         )
 
     # Save initial checkpoint
-    _save_checkpoint(dag_state, note_fn)
+    _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
 
     # Per-repo git init for multi-repo builds
     if workspace_manifest and call_fn:
@@ -1502,7 +1565,7 @@ async def run_dag(
 
         # Track in-flight issues and checkpoint before execution (Bug 4 fix)
         dag_state.in_flight_issues = [i["name"] for i in active_issues]
-        _save_checkpoint(dag_state, note_fn)
+        _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
 
         # Execute all issues in this level concurrently
         level_result = await _execute_level(
@@ -1514,7 +1577,7 @@ async def run_dag(
         dag_state.in_flight_issues = []  # level barrier reached
 
         # Checkpoint after level barrier
-        _save_checkpoint(dag_state, note_fn)
+        _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
 
         # Record results
         dag_state.completed_issues.extend(level_result.completed)
@@ -1531,6 +1594,23 @@ async def run_dag(
                 f"completed={completed_names_level}, failed={failed_names_level}",
                 tags=["execution", "level", "complete"],
             )
+
+        # --- FATAL PROVIDER ABORT CHECK ---
+        # Auth/billing/credential failures are systemic. Replanning or accepting
+        # issue debt cannot fix them, so stop before the failure cascades.
+        fatal_failures = _fatal_provider_failures(level_result.failed)
+        if fatal_failures:
+            if note_fn:
+                first = fatal_failures[0]
+                note_fn(
+                    f"Fatal provider error while executing {first.issue_name}: "
+                    f"{first.error_message[:300]} — aborting DAG",
+                    tags=["execution", "abort", "fatal_provider"],
+                )
+            dag_state = _skip_unfinished_issues(dag_state)
+            dag_state.current_level = len(dag_state.levels)
+            _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
+            break
 
         # --- LEVEL FAILURE ABORT CHECK ---
         # When most issues in a level fail (e.g. resource exhaustion, network
@@ -1554,7 +1634,7 @@ async def run_dag(
                         if name not in dag_state.skipped_issues:
                             dag_state.skipped_issues.append(name)
                 dag_state.current_level = len(dag_state.levels)
-                _save_checkpoint(dag_state, note_fn)
+                _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
                 break
 
         # --- MERGE GATE (git workflow) ---
@@ -1673,7 +1753,7 @@ async def run_dag(
                 f for f in level_result.failed
                 if f.outcome != IssueOutcome.FAILED_NEEDS_SPLIT
             ]
-            _save_checkpoint(dag_state, note_fn)
+            _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
 
         # --- REPLAN GATE: check for unrecoverable and escalated failures ---
         unrecoverable = [
@@ -1731,7 +1811,7 @@ async def run_dag(
                             )
 
                         # Checkpoint after replan applied
-                        _save_checkpoint(dag_state, note_fn)
+                        _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
 
                         # current_level was reset to 0 by apply_replan
                         continue  # re-enter loop at new level 0
@@ -1796,6 +1876,6 @@ async def run_dag(
         )
 
     # Final checkpoint
-    _save_checkpoint(dag_state, note_fn)
+    _save_checkpoint(dag_state, note_fn, label=checkpoint_label)
 
     return dag_state

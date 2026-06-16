@@ -56,6 +56,7 @@ def fix_generator_task_prompt(
     failed_criteria: list[dict],
     dag_state_summary: dict,
     prd: dict,
+    previously_failed_criteria: list[dict] | None = None,
 ) -> str:
     """Build the task prompt for the fix generator agent.
 
@@ -63,6 +64,9 @@ def fix_generator_task_prompt(
         failed_criteria: List of CriterionResult dicts that failed.
         dag_state_summary: Summary of DAG execution state.
         prd: The PRD dict for project context.
+        previously_failed_criteria: Criteria that failed in prior fix cycles.
+            When non-empty, surfaced so repeatedly-failing criteria can be
+            recorded as debt instead of re-attempted. Cycle 1 passes none.
     """
     sections: list[str] = []
 
@@ -74,6 +78,19 @@ def fix_generator_task_prompt(
             f"- **Evidence**: {criterion.get('evidence', '(none)')}\n"
             f"- **Responsible issue**: {criterion.get('issue_name', '(unknown)')}"
         )
+
+    if previously_failed_criteria:
+        # Dedupe by criterion so the section does not grow with repeats.
+        seen: set[str] = set()
+        prior: list[str] = []
+        for c in previously_failed_criteria:
+            name = c.get("criterion", "")
+            if name and name not in seen:
+                seen.add(name)
+                prior.append(name)
+        if prior:
+            sections.append("\n## Previously Failed Criteria (record as debt if unfixable)")
+            sections.extend(f"- {name}" for name in prior)
 
     sections.append("\n## Project Context")
     sections.append(f"- PRD description: {prd.get('validated_description', '(not available)')[:500]}")

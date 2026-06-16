@@ -18,6 +18,19 @@ import re
 
 # Patterns that indicate a non-retryable API failure.
 # Matched case-insensitively against error_message strings.
+_AUTH_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"api error:\s*401",
+        r"\b401\b.{0,120}authentication",
+        r"authentication_error",
+        r"invalid authentication credentials",
+        r"please run /login",
+        r"oauth.{0,40}(expired|invalid|revoked)",
+        r"unauthorized",
+    )
+)
+
 _FATAL_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     re.compile(p, re.IGNORECASE)
     for p in (
@@ -50,11 +63,32 @@ class FatalHarnessError(RuntimeError):
         self.original_message = message
 
 
+class AuthHarnessError(FatalHarnessError):
+    """Raised when the harness encounters a non-retryable auth error."""
+
+    def __init__(self, message: str) -> None:
+        RuntimeError.__init__(
+            self,
+            f"AuthError (non-retryable): {message}. "
+            "Refresh Claude Code authentication or run /login before retrying.",
+        )
+        self.original_message = message
+
+
+def is_auth_error(error_message: str) -> bool:
+    """Return True if *error_message* matches a known auth failure pattern."""
+    if not error_message:
+        return False
+    return any(p.search(error_message) for p in _AUTH_PATTERNS)
+
+
 def is_fatal_error(error_message: str) -> bool:
     """Return True if *error_message* matches a known fatal API error pattern."""
     if not error_message:
         return False
-    return any(p.search(error_message) for p in _FATAL_PATTERNS)
+    return is_auth_error(error_message) or any(
+        p.search(error_message) for p in _FATAL_PATTERNS
+    )
 
 
 def check_fatal_harness_error(result) -> None:
@@ -78,5 +112,7 @@ def check_fatal_harness_error(result) -> None:
     if not getattr(result, "is_error", False):
         return
     msg = getattr(result, "error_message", "") or ""
+    if is_auth_error(msg):
+        raise AuthHarnessError(msg)
     if is_fatal_error(msg):
         raise FatalHarnessError(msg)

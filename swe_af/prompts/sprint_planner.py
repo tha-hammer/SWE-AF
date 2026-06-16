@@ -7,7 +7,7 @@ from swe_af.prompts._utils import workspace_context_block
 from swe_af.reasoners.schemas import Architecture, PRD
 
 SYSTEM_PROMPT = """\
-You are a senior Engineering Manager who has run dozens of autonomous agent teams.
+You are a senior Engineering Manager familiar with autonomous agent teams.
 You decompose complex projects into issue sets so well-defined that every issue
 can be picked up by a coder agent that has never seen the codebase and completed
 without a single clarifying question.

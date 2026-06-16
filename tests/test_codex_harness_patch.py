@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from swe_af.runtime.codex_harness_patch import (
+    _CapturedStdoutStream,
     _augment_codex_error_message,
     _codex_strict_json_schema,
+    _format_claude_auth_error,
+    _is_claude_auth_error,
+    _stdout_tail,
     active_provider,
     apply_codex_harness_patch,
 )
@@ -62,6 +66,42 @@ def test_codex_git_metadata_error_gets_actionable_hint() -> None:
 
 def test_codex_unrelated_error_is_unchanged() -> None:
     assert _augment_codex_error_message("plain error", "plain error") == "plain error"
+
+
+def test_claude_auth_error_is_classified_with_actionable_message() -> None:
+    raw = 'API Error: 401 {"type":"authentication_error"} Please run /login'
+
+    assert _is_claude_auth_error(raw)
+    classified = _format_claude_auth_error(raw)
+    assert classified.startswith("AuthError: Claude Code authentication failed")
+    assert "Please run /login" in classified
+
+
+def test_claude_stdout_capture_retains_non_json_error_banner() -> None:
+    class FakeStream:
+        async def __aiter__(self):
+            for line in [
+                'API Error: 401 {"type":"authentication_error"}\n',
+                "Please run /login\n",
+            ]:
+                yield line
+
+    from types import SimpleNamespace
+
+    owner = SimpleNamespace()
+
+    async def consume() -> list[str]:
+        return [line async for line in _CapturedStdoutStream(FakeStream(), owner)]
+
+    import asyncio
+
+    assert asyncio.run(consume()) == [
+        'API Error: 401 {"type":"authentication_error"}\n',
+        "Please run /login\n",
+    ]
+    captured = _stdout_tail(owner)
+    assert "API Error: 401" in captured
+    assert "Please run /login" in captured
 
 
 def test_codex_prompt_suffix_uses_final_json_not_write_tool(tmp_path) -> None:
