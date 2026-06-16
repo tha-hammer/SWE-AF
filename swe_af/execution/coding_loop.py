@@ -334,7 +334,9 @@ async def _run_default_path(
                 f"Reviewer failed: {issue_name}: {e}",
                 tags=["coding_loop", "review_error", issue_name],
             )
-        review_result = {"approved": True, "blocking": False, "summary": f"Review unavailable: {e}"}
+        # Reviewer crashed — no verdict. Do NOT auto-approve (false green);
+        # request a fix so persistent failure exhausts to an honest FAILED.
+        review_result = {"approved": False, "blocking": False, "errored": True, "summary": f"Review errored (no verdict) — requesting fix: {e}"}
 
     if note_fn:
         note_fn(
@@ -439,7 +441,7 @@ async def _run_flagged_path(
                     f"Review agent failed: {issue_name}: {review_result}",
                     tags=["coding_loop", "review_error", issue_name],
                 )
-            review_result = {"approved": True, "blocking": False, "summary": f"Review unavailable: {review_result}"}
+            review_result = {"approved": False, "blocking": False, "errored": True, "summary": f"Review errored (no verdict) — requesting fix: {review_result}"}
     except FatalHarnessError:
         raise
     except Exception as e:
@@ -449,7 +451,8 @@ async def _run_flagged_path(
                 tags=["coding_loop", "qa_review_error", issue_name],
             )
         qa_result = {"passed": False, "summary": f"QA unavailable: {e}"}
-        review_result = {"approved": True, "blocking": False, "summary": "Review unavailable"}
+        # Both QA and review crashed — no verdict. Do NOT auto-approve.
+        review_result = {"approved": False, "blocking": False, "errored": True, "summary": f"Review errored (no verdict): {e}"}
 
     if note_fn:
         note_fn(

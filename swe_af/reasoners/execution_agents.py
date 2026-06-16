@@ -1190,9 +1190,13 @@ async def run_code_reviewer(
             tags=["code_reviewer", "error"],
         )
 
+    # A reviewer that crashed never produced a verdict — it must NOT be treated
+    # as an approval (that masks total failure as a false green). Return
+    # not-approved so the coding loop requests a fix / retries; persistent
+    # failure then exhausts to an honest FAILED rather than COMPLETED.
     return CodeReviewResult(
-        approved=True,  # don't block on reviewer failure
-        summary=f"Code reviewer agent failed for {issue_name} — not blocking",
+        approved=False,
+        summary=f"Code reviewer agent errored for {issue_name} (no verdict) — requesting fix: {e}",
         blocking=False,
         iteration_id=iteration_id,
     ).model_dump()
