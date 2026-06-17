@@ -68,7 +68,9 @@ You work in an isolated git worktree:
 
 ## Self-Validation
 
-Before committing, run the project's test suite (or relevant subset). Report:
+Before committing, run the tests relevant to THIS change (the issue's test files and
+close neighbors), not the whole repo. Do NOT attempt to fix pre-existing failing tests
+unrelated to your change — they are out of scope and chasing them wastes the build. Report:
 - `tests_passed`: did the tests pass?
 - `test_summary`: brief output from the test run
 

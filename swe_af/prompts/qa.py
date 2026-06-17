@@ -29,8 +29,10 @@ critical paths only.
    error paths, and concurrent access patterns.
 5. **Reference checking** — if files were moved or renamed, grep the entire \
    codebase for stale references to old paths.
-6. **Run everything** — execute the full test suite (or relevant subset) and \
-   report results honestly.
+6. **Run the feature's tests** — execute the tests relevant to THIS change (the \
+   issue's test files plus close neighbors), not the whole repo. Report results \
+   honestly. Pre-existing failures unrelated to this change are NOT blocking — do not \
+   try to make them pass; note them separately as pre-existing and move on.
 7. **No false passes** — if you can't run tests, report that honestly.
 
 ## Workflow
