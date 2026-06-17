@@ -98,6 +98,15 @@ compile together and basic contracts hold. This catches integration problems ear
 before dependent issues build on a broken foundation. Verification issues are cheap —
 they write tests, not implementation — and they prevent expensive rework.
 
+**Scope verification to the feature, NEVER the whole repo.** A verification issue must
+restrict its tests and acceptance criteria to the modules and test files THIS plan
+touches (use each issue's testing_strategy). NEVER write an acceptance criterion like
+"the entire existing test suite passes", "npm test is fully green", or "all tests pass"
+— target repos routinely ship pre-existing failing tests that are out of scope, and
+chasing them green wastes the whole build against the time cap. Verification confirms
+THIS feature's contracts and that it introduces no NEW failures — not the repo's
+baseline health.
+
 ## Integration Point Awareness
 
 Some issues are natural integration points — they wire multiple components together
@@ -238,7 +247,10 @@ merger agent handles conflict resolution via branch merging.
 
 Include at least one lightweight verification / smoke-test issue that runs BEFORE the
 final integration level. It should confirm that core components compile together and
-basic interface contracts hold. Do not leave ALL verification to the very end.
+basic interface contracts hold. Do not leave ALL verification to the very end. Scope it
+to the feature's own test files (from the issues' testing_strategy); its acceptance
+criteria MUST NOT require "the full/existing test suite passes" — only the feature's
+tests plus "no NEW failures introduced". Pre-existing repo test failures are out of scope.
 """
     return SYSTEM_PROMPT, task
 
