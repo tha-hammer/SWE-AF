@@ -15,8 +15,10 @@ from typing import Optional
 import pytest
 
 from swe_af.execution.fatal_error import (
+    AuthHarnessError,
     FatalHarnessError,
     check_fatal_harness_error,
+    is_auth_error,
     is_fatal_error,
 )
 
@@ -50,10 +52,24 @@ class TestIsFatalError:
             "billing suspended",
             "Quota exceeded for this model",
             "quota has been exceeded",
+            'API Error: 401 {"type":"authentication_error"}',
+            "Invalid authentication credentials. Please run /login",
         ],
     )
     def test_fatal_patterns_detected(self, message: str) -> None:
         assert is_fatal_error(message), f"Should detect as fatal: {message!r}"
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            'API Error: 401 {"type":"authentication_error"}',
+            "Please run /login",
+            "Invalid authentication credentials",
+            "OAuth token expired",
+        ],
+    )
+    def test_auth_patterns_detected(self, message: str) -> None:
+        assert is_auth_error(message), f"Should detect as auth: {message!r}"
 
     @pytest.mark.parametrize(
         "message",
@@ -125,6 +141,14 @@ class TestCheckFatalHarnessError:
     def test_fatal_error_invalid_key_raises(self) -> None:
         result = FakeResult(is_error=True, error_message="Invalid API key")
         with pytest.raises(FatalHarnessError):
+            check_fatal_harness_error(result)
+
+    def test_auth_error_raises_auth_harness_error(self) -> None:
+        result = FakeResult(
+            is_error=True,
+            error_message='API Error: 401 {"type":"authentication_error"} Please run /login',
+        )
+        with pytest.raises(AuthHarnessError, match="AuthError"):
             check_fatal_harness_error(result)
 
     def test_none_error_message_passes(self) -> None:

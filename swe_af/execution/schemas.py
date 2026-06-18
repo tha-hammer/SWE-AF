@@ -404,6 +404,12 @@ class VerificationResult(BaseModel):
     criteria_results: list[CriterionResult]
     summary: str
     suggested_fixes: list[str] = []
+    # Hard gate: did the project's REAL production build command exit zero?
+    # A non-zero prod build is never shippable, so it blocks the PR regardless of
+    # debt (see _execution_status). Defaults True for backward compatibility —
+    # only an explicit False from the verifier triggers the gate.
+    build_passed: bool = True
+    build_command: str = ""  # The build command actually run (evidence)
 
 
 # ---------------------------------------------------------------------------
@@ -694,7 +700,10 @@ class BuildConfig(BaseModel):
     max_retries_per_issue: int = 2
     max_replans: int = 2
     enable_replanning: bool = True
-    max_verify_fix_cycles: int = 1
+    max_verify_fix_cycles: int = 2  # was 1 — allows a 2nd fix attempt so B4/B6/B7 engage
+    # Between-cycles wall-clock budget for the verify/fix loop. Evaluated before
+    # launching a fix DAG (never interrupts an in-flight one); 0 disables.
+    verify_fix_soft_deadline_seconds: int = 3600
     git_init_max_retries: int = 3  # Number of retry attempts for git_init
     git_init_retry_delay: float = 1.0  # Seconds to wait between retries
     max_integration_test_retries: int = 1
@@ -870,11 +879,18 @@ class BuildResult(BaseModel):
     dag_state: dict
     verification: dict | None = None
     success: bool
+    status: Literal["completed", "completed_with_debt", "failed"] = "completed"
     summary: str
     pr_results: list[RepoPRResult] = []  # Per-repo PR creation results
     # Per-repo result of the post-PR CI gate (watch → fix → repush → ready).
     # Empty when ``BuildConfig.check_ci`` is False or no PR was opened.
     ci_gate_results: list[dict] = []
+
+    @model_validator(mode="after")
+    def _default_status_from_success(self) -> "BuildResult":
+        if "status" not in self.model_fields_set:
+            self.status = "completed" if self.success else "failed"
+        return self
 
     @property
     def pr_url(self) -> str:

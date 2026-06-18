@@ -4,6 +4,7 @@ import asyncio
 import contextvars
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,78 @@ active_provider: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 
 _ORIGINAL_BUILD_PROMPT_SUFFIX: Any = None
 _ORIGINAL_TRY_PARSE_FROM_TEXT: Any = None
+
+_CLAUDE_OUTPUT_LIMIT_BYTES = 8192
+
+_CLAUDE_AUTH_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"api error:\s*401",
+        r"authentication_error",
+        r"invalid authentication credentials",
+        r"please run /login",
+        r"oauth.{0,40}(expired|invalid|revoked)",
+    )
+)
+
+
+def _is_claude_auth_error(message: str) -> bool:
+    return bool(message) and any(p.search(message) for p in _CLAUDE_AUTH_PATTERNS)
+
+
+def _format_claude_auth_error(message: str) -> str:
+    if not _is_claude_auth_error(message) or message.startswith("AuthError:"):
+        return message
+    return (
+        "AuthError: Claude Code authentication failed. "
+        "Refresh the Claude Code OAuth token or run /login before retrying.\n"
+        f"{message}"
+    )
+
+
+def _trim_output(text: str, limit: int = _CLAUDE_OUTPUT_LIMIT_BYTES) -> str:
+    data = text.encode("utf-8", errors="replace")
+    if len(data) <= limit:
+        return text
+    tail = data[-limit:].decode("utf-8", errors="replace")
+    return f"... <truncated to last {limit} bytes> ...\n{tail}"
+
+
+def _remember_stdout_tail(owner: Any, line: Any) -> None:
+    text = str(line).rstrip()
+    if not text:
+        return
+    tail = list(getattr(owner, "_swe_af_stdout_tail", []))
+    tail.append(text)
+    while (
+        len("\n".join(tail).encode("utf-8", errors="replace")) > _CLAUDE_OUTPUT_LIMIT_BYTES
+        and len(tail) > 1
+    ):
+        tail.pop(0)
+    if len("\n".join(tail).encode("utf-8", errors="replace")) > _CLAUDE_OUTPUT_LIMIT_BYTES:
+        tail = [_trim_output(tail[-1])]
+    setattr(owner, "_swe_af_stdout_tail", tail)
+
+
+def _stdout_tail(owner: Any) -> str:
+    return _trim_output("\n".join(getattr(owner, "_swe_af_stdout_tail", [])).strip())
+
+
+class _CapturedStdoutStream:
+    def __init__(self, stream: Any, owner: Any) -> None:
+        self._stream = stream
+        self._owner = owner
+
+    def __aiter__(self):
+        return self._iterate()
+
+    async def _iterate(self):
+        async for line in self._stream:
+            _remember_stdout_tail(self._owner, line)
+            yield line
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._stream, name)
 
 
 def _codex_strict_json_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -137,7 +210,12 @@ def apply_codex_harness_patch() -> None:
             strip_ansi,
         )
         from agentfield.harness._result import FailureType, Metrics, RawResult
+        from agentfield.harness.providers.claude import ClaudeCodeProvider
         from agentfield.harness.providers.codex import CodexProvider
+        from claude_agent_sdk._errors import ProcessError
+        from claude_agent_sdk._internal.transport.subprocess_cli import (
+            SubprocessCLITransport,
+        )
     except Exception:
         return
 
@@ -358,6 +436,45 @@ def apply_codex_harness_patch() -> None:
         finally:
             active_provider.reset(token)
 
+    _orig_claude_connect = SubprocessCLITransport.connect
+    _orig_claude_read_messages = SubprocessCLITransport._read_messages_impl
+    _orig_claude_execute = ClaudeCodeProvider.execute
+
+    async def _connect_with_stdout_capture(self: Any) -> None:
+        await _orig_claude_connect(self)
+        setattr(self, "_swe_af_stdout_tail", [])
+        if getattr(self, "_stdout_stream", None) is not None:
+            self._stdout_stream = _CapturedStdoutStream(self._stdout_stream, self)
+
+    async def _read_messages_with_process_output(self: Any):
+        try:
+            async for message in _orig_claude_read_messages(self):
+                yield message
+        except ProcessError as exc:
+            stdout_output = _stdout_tail(self)
+            if not stdout_output:
+                raise
+            message = str(exc)
+            augmented = (
+                f"{message}\n"
+                "Stdout output:\n"
+                f"{stdout_output}"
+            )
+            augmented_error = ProcessError(augmented)
+            augmented_error.exit_code = getattr(exc, "exit_code", None)
+            augmented_error.stderr = getattr(exc, "stderr", None)
+            raise augmented_error from exc
+
+    async def _execute_with_claude_auth_classification(
+        self: Any, prompt: str, options: dict[str, object]
+    ) -> Any:
+        raw = await _orig_claude_execute(self, prompt, options)
+        error_message = getattr(raw, "error_message", "") or ""
+        if getattr(raw, "is_error", False) and _is_claude_auth_error(error_message):
+            raw.error_message = _format_claude_auth_error(error_message)
+            raw.failure_type = FailureType.API_ERROR
+        return raw
+
     _schema.build_prompt_suffix = build_prompt_suffix_dispatching
     _runner.build_prompt_suffix = build_prompt_suffix_dispatching
     # Assign the BAML wrap to BOTH bindings. _runner.try_parse_from_text is the
@@ -367,5 +484,8 @@ def apply_codex_harness_patch() -> None:
     _runner.try_parse_from_text = try_parse_from_text_fallback_first
     _schema.try_parse_from_text = try_parse_from_text_fallback_first
     CodexProvider.execute = execute_with_native_structured_output
+    SubprocessCLITransport.connect = _connect_with_stdout_capture
+    SubprocessCLITransport._read_messages_impl = _read_messages_with_process_output
+    ClaudeCodeProvider.execute = _execute_with_claude_auth_classification
     Agent.harness = _harness_with_provider_context
     _PATCHED = True

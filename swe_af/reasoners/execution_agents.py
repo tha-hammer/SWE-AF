@@ -1387,6 +1387,7 @@ async def generate_fix_issues(
     permission_mode: str = "",
     ai_provider: str = "claude",
     workspace_manifest: dict | None = None,
+    previously_failed_criteria: list[dict] | None = None,
 ) -> dict:
     """Generate targeted fix issues from failed verification criteria.
 
@@ -1402,6 +1403,7 @@ async def generate_fix_issues(
         failed_criteria=failed_criteria,
         dag_state_summary=dag_state,
         prd=prd,
+        previously_failed_criteria=previously_failed_criteria,
     )
 
     # If multi-repo, ensure generated fix issues get target_repo set

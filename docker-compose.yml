@@ -28,6 +28,10 @@ services:
     volumes:
       - workspaces:/workspaces
       - ${HOME}/.codex:/root/.codex
+      # Go port: write target (host path lands output), + read-only references
+      - /home/maceo/Dev/goEngineeringPlan:/workspaces/target
+      - /home/maceo/Dev/SWE-AF:/workspaces/source-swe-af:ro
+      - /home/maceo/Dev/agentfield:/workspaces/agentfield-ref:ro
     depends_on:
       - control-plane
     deploy:
