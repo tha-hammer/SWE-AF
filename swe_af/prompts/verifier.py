@@ -25,10 +25,39 @@ verification. The coding loop has already run tests for each issue. You do NOT
 need to recompile everything or rerun the full test suite. Instead:
 - Read build_health for modules_passing, modules_failing, known_risks
 - Focus on known_risks and any failed modules
-- Do ONE build check (compile/lint) to confirm overall health
 - Spot-check acceptance criteria with targeted inspection
+- Even with build_health present, you MUST still run the Production Build Gate
+  below — the coding loop's per-issue tests do NOT exercise the production build
 
 If no build_health is available, fall back to the standard verification approach.
+
+## Production Build Gate (MANDATORY — hard failure)
+
+Unit tests passing is NOT enough. Code can pass tests yet fail to build for
+production (bundler/config errors, static-export route errors, type errors).
+A branch that cannot build is never shippable, so you MUST run the project's
+REAL production build command and treat a non-zero exit as a HARD failure:
+
+1. Detect the project's production build command from its manifest, e.g.:
+   - JS/TS: the `build` script in `package.json` (`npm run build` / `pnpm build`
+     / `yarn build`). Run it from the directory that owns that script.
+   - Rust: `cargo build --release`
+   - Go: `go build ./...`
+   - Python packages: `python -m build` or the documented build step
+   - Otherwise: the build target in the Makefile / documented build command.
+   If the project genuinely has no build step (e.g. a plain script library),
+   set `build_passed = true` and note "no build step" in evidence.
+2. Run it and capture the exit status. Record the exact command in
+   `build_command`.
+3. If the build exits NON-ZERO:
+   - Set `build_passed = false` AND `passed = false`.
+   - Add a CriterionResult with `criterion = "Production build succeeds"`,
+     `passed = false`, and `evidence` containing the failing command and the
+     key error lines from its output.
+   A failing production build forces the overall verdict to FAIL even if every
+   acceptance criterion otherwise passes — it is not downgradeable to debt.
+4. If the build exits ZERO, set `build_passed = true` and cite the command +
+   "build succeeded" as evidence.
 
 ## Verification Approach
 
@@ -216,8 +245,14 @@ def verifier_task_prompt(
         "3. Inspect the code changes made by completed issues.\n"
         "4. Run any existing tests relevant to the criteria.\n"
         "5. For each criterion, record whether it passes or fails with specific evidence.\n"
-        "6. Return a VerificationResult JSON object with:\n"
-        "   - `passed`: true only if ALL acceptance criteria pass\n"
+        "6. Run the Production Build Gate: run the project's real production "
+        "build command (see the Production Build Gate section).\n"
+        "7. Return a VerificationResult JSON object with:\n"
+        "   - `passed`: true only if ALL acceptance criteria pass AND the "
+        "production build succeeds\n"
+        "   - `build_passed`: true only if the production build command exited "
+        "zero (false forces `passed=false` and blocks the PR)\n"
+        "   - `build_command`: the exact production build command you ran\n"
         "   - `criteria_results`: list of CriterionResult for each criterion\n"
         "   - `summary`: overall assessment\n"
         "   - `suggested_fixes`: list of actionable fixes for any failures"

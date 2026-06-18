@@ -404,6 +404,12 @@ class VerificationResult(BaseModel):
     criteria_results: list[CriterionResult]
     summary: str
     suggested_fixes: list[str] = []
+    # Hard gate: did the project's REAL production build command exit zero?
+    # A non-zero prod build is never shippable, so it blocks the PR regardless of
+    # debt (see _execution_status). Defaults True for backward compatibility —
+    # only an explicit False from the verifier triggers the gate.
+    build_passed: bool = True
+    build_command: str = ""  # The build command actually run (evidence)
 
 
 # ---------------------------------------------------------------------------
