@@ -164,6 +164,7 @@ Most agent frameworks wrap a single coder loop. SWE-AF is a coordinated engineer
 
 - **Hardness-aware execution** — easy issues pass through quickly, while hard issues trigger deeper adaptation and DAG-level replanning instead of blind retries.
 - **Factory architecture** — not a single-agent wrapper. Planning, execution, and governance agents run as a coordinated control stack — the architecture encodes the engineering strategy, not the prompts (see [The Atomic Unit of Intelligence](https://www.santoshkumarradha.com/writing/atomic-unit-of-intelligence)).
+- **DDD Planning Loop** — between architecture approval and sprint decomposition, an Architect-owned, deterministically-validated loop deepens the design into typed bounded contexts, a modular-monolith event backbone, CQRS-lite read models, guardrails, and one end-to-end vertical slice — so issues carry real domain context (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 - **Multi-model, multi-provider** — assign different models per role (`coder: opus`, `qa: haiku`). Works with Claude, OpenRouter, OpenAI, and Google.
 - **Continual learning** — with `enable_learning=true`, conventions and failure patterns discovered early are injected into downstream issues.
 - **Agent-scale parallelism** — dependency-level scheduling + isolated git worktrees allow large fan-out without branch collisions.

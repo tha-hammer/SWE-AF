@@ -89,6 +89,34 @@ The planning chain is a five-agent pipeline that progressively refines a vague g
 
 5. **Issue Writers** — fan out in parallel across all issues, writing self-contained `issue-*.md` specs with full context so each coder agent can work independently.
 
+### DDD Planning Loop
+
+Between Tech Lead approval and Sprint Planner decomposition, an Architect-owned
+**DDD Planning Loop** takes the approved architecture one level deeper into a typed
+`ArchitecturePlanningArtifacts` object. This is a *planning artifact* describing the
+target project's domain — **not** a runtime Kafka/event-sourcing implementation.
+
+It produces a **current** and a **future** Mermaid software diagram, **bounded
+contexts** (each with aggregates, domain services, and domain events), a
+**Modular Monolith** plus an **Internal Event Backbone** whose default transport is a simple
+in-process bus (a non-`in_process` transport requires an explicit
+`migration_justification` toward queue/pub-sub/Kafka later), code-level **module
+contracts**, a versioned internal **event schema**, explicit **data ownership**,
+**CQRS-lite** read models (each referencing its source events), architectural
+**guardrails** (each with an enforcement mechanism), first-class **observability**
+requirements, exactly one end-to-end **vertical slice**, and an
+**extraction strategy** gated on a tested, functional slice.
+
+A pure, deterministic validator (`validate_planning_artifacts`) checks the artifact
+and feeds actionable errors back to the Architect; `plan()` retries up to
+`max_planning_loop_iterations` and then **force-accepts** the best artifacts with a
+warning (degrade-don't-abort, mirroring the Tech Lead loop) rather than failing the
+build. Major planning events are appended to `plan/planning-events.jsonl` for
+observability. The Sprint Planner consumes the artifacts so each `PlannedIssue`
+carries `bounded_context`, `contract_refs`, `domain_events`, `read_models`,
+`guardrails`, `observability`, and a `slice_role`; the Issue Writer renders those
+into the issue spec; and the artifacts ride along on `DAGState` for replanning.
+
 **From Issues to Levels:**
 
 After planning, `_compute_levels()` runs **Kahn's algorithm** to topologically sort issues into parallel execution levels. Issues with no unmet dependencies land in level 0; issues depending only on level-0 work land in level 1; and so on. The algorithm detects cycles and raises immediately — a cyclic plan is a hard failure.
