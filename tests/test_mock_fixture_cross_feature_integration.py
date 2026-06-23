@@ -129,7 +129,9 @@ async def _call_plan(tmp_path: str, **kwargs) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_mock_agent_ai_intercepts_node_id_prefixed_calls(mock_agent_ai, tmp_path):
+async def test_mock_agent_ai_intercepts_node_id_prefixed_calls(
+    mock_agent_ai, tmp_path, complete_planning_artifacts_dict
+):
     """The mock_agent_ai fixture must intercept ALL app.call() invocations
     made by plan(), including those with f'{NODE_ID}.xxx' routing strings.
 
@@ -140,16 +142,18 @@ async def test_mock_agent_ai_intercepts_node_id_prefixed_calls(mock_agent_ai, tm
     prd = _make_prd()
     arch = _make_arch()
     review = _make_review_approved()
+    planning = complete_planning_artifacts_dict
     sprint = _make_sprint(["int-issue-1"])
     iw = _make_issue_writer("int-issue-1")
 
-    mock_agent_ai.side_effect = [prd, arch, review, sprint, iw]
+    mock_agent_ai.side_effect = [prd, arch, review, planning, sprint, iw]
 
     result = await _call_plan(str(tmp_path))
 
-    # All 5 sub-calls must have been intercepted (no real network)
-    assert mock_agent_ai.call_count == 5, (
-        f"Expected 5 intercepted calls, got {mock_agent_ai.call_count}"
+    # All 6 sub-calls must have been intercepted (no real network);
+    # the planning loop adds one call between Tech Lead and Sprint Planner.
+    assert mock_agent_ai.call_count == 6, (
+        f"Expected 6 intercepted calls, got {mock_agent_ai.call_count}"
     )
     # Verify each call used a routing string (first positional arg)
     call_targets = [c.args[0] for c in mock_agent_ai.call_args_list]
@@ -168,7 +172,9 @@ async def test_mock_agent_ai_intercepts_node_id_prefixed_calls(mock_agent_ai, tm
 
 
 @pytest.mark.asyncio
-async def test_plain_dict_mock_bypasses_envelope_unwrapping(mock_agent_ai, tmp_path):
+async def test_plain_dict_mock_bypasses_envelope_unwrapping(
+    mock_agent_ai, tmp_path, complete_planning_artifacts_dict
+):
     """Plain dict mock responses (no envelope keys) must flow through _unwrap
     on the fast path without raising RuntimeError.
 
@@ -180,13 +186,14 @@ async def test_plain_dict_mock_bypasses_envelope_unwrapping(mock_agent_ai, tmp_p
     prd = _make_prd()
     arch = _make_arch()
     review = _make_review_approved()
+    planning = complete_planning_artifacts_dict
     sprint = _make_sprint(["env-issue"])
     iw = _make_issue_writer("env-issue")
 
-    mock_agent_ai.side_effect = [prd, arch, review, sprint, iw]
+    mock_agent_ai.side_effect = [prd, arch, review, planning, sprint, iw]
 
     # Verify that none of our mock dicts accidentally contain envelope keys
-    for mock_dict in [prd, arch, review, sprint, iw]:
+    for mock_dict in [prd, arch, review, planning, sprint, iw]:
         overlap = _ENVELOPE_KEYS.intersection(mock_dict)
         assert not overlap, (
             f"Mock dict accidentally contains envelope key(s) {overlap}, "
@@ -210,7 +217,9 @@ async def test_plain_dict_mock_bypasses_envelope_unwrapping(mock_agent_ai, tmp_p
 
 
 @pytest.mark.asyncio
-async def test_plan_output_is_valid_execute_input(mock_agent_ai, tmp_path):
+async def test_plan_output_is_valid_execute_input(
+    mock_agent_ai, tmp_path, complete_planning_artifacts_dict
+):
     """plan() output dict must satisfy execute()'s structural requirements.
 
     execute() calls run_dag(plan_result=...) and internally accesses
@@ -228,7 +237,9 @@ async def test_plan_output_is_valid_execute_input(mock_agent_ai, tmp_path):
     iw_a = _make_issue_writer("issue-a")
     iw_b = _make_issue_writer("issue-b")
 
-    mock_agent_ai.side_effect = [prd, arch, review, sprint, iw_a, iw_b]
+    mock_agent_ai.side_effect = [
+        prd, arch, review, complete_planning_artifacts_dict, sprint, iw_a, iw_b
+    ]
     plan_result = await _call_plan(str(tmp_path))
 
     # Verify structural requirements needed by execute() / run_dag()

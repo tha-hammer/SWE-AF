@@ -19,7 +19,12 @@ from dotenv import load_dotenv
 load_dotenv()  # surface HAX_API_KEY (and friends) before Agent() is constructed
 
 from swe_af.reasoners import router
-from swe_af.reasoners.pipeline import _assign_sequence_numbers, _compute_levels, _validate_file_conflicts
+from swe_af.reasoners.pipeline import (
+    _assign_sequence_numbers,
+    _compute_levels,
+    _validate_file_conflicts,
+    validate_planning_artifacts,
+)
 from swe_af.reasoners.schemas import PlanResult, ReviewResult
 
 from agentfield import Agent
@@ -1567,6 +1572,55 @@ async def build(
             clear_scoped_credentials(_scope_id)
 
 
+async def _run_architecture_planning_loop_until_valid(
+    *,
+    prd: dict,
+    architecture: dict,
+    repo_path: str,
+    artifacts_dir: str,
+    model: str,
+    max_iterations: int,
+    permission_mode: str,
+    ai_provider: str,
+    workspace_manifest: dict | None,
+) -> dict:
+    """Run the DDD planning loop, retrying with validator feedback until valid.
+
+    On exhausting ``max_iterations`` this does NOT raise — it force-accepts the
+    best artifacts and emits a warning note carrying the residual feedback,
+    mirroring the Tech Lead force-approve (degrade-don't-abort). Returns the
+    artifacts dict.
+    """
+    planning_artifacts: dict = {}
+    feedback: list[str] = []
+    for i in range(max_iterations):
+        planning_artifacts = _unwrap(await app.call(
+            f"{NODE_ID}.run_architecture_planning_loop",
+            prd=prd,
+            architecture=architecture,
+            repo_path=repo_path,
+            artifacts_dir=artifacts_dir,
+            validation_feedback=feedback,
+            model=model,
+            permission_mode=permission_mode,
+            ai_provider=ai_provider,
+            workspace_manifest=workspace_manifest,
+        ), "run_architecture_planning_loop")
+        feedback = validate_planning_artifacts(planning_artifacts)
+        if not feedback:
+            app.note("Planning loop validated", tags=["pipeline", "planning_loop", "ok"])
+            return planning_artifacts
+        app.note(
+            f"Planning loop validation failed (attempt {i + 1}): {len(feedback)} issues",
+            tags=["pipeline", "planning_loop", "retry"],
+        )
+    app.note(
+        f"Planning loop accepted with {len(feedback)} unresolved warnings: {feedback}",
+        tags=["pipeline", "planning_loop", "accepted_with_warnings"],
+    )
+    return planning_artifacts
+
+
 @app.reasoner()
 async def plan(
     goal: str,
@@ -1579,6 +1633,8 @@ async def plan(
     tech_lead_model: str = "sonnet",
     sprint_planner_model: str = "sonnet",
     issue_writer_model: str = "sonnet",
+    planning_loop_model: str = "sonnet",
+    max_planning_loop_iterations: int = 2,
     permission_mode: str = "",
     ai_provider: str = "claude",
     workspace_manifest: dict | None = None,
@@ -1677,6 +1733,22 @@ async def plan(
             summary=review["summary"] + " [auto-approved after max iterations]",
         ).model_dump()
 
+    # 3.5. DDD modular planning loop (Architect-owned): take the approved
+    # architecture one level deeper into typed bounded contexts + event backbone,
+    # validated deterministically, before Sprint Planner decomposes the work.
+    app.note("Phase 3.5: DDD Planning Loop", tags=["pipeline", "planning_loop"])
+    planning_artifacts = await _run_architecture_planning_loop_until_valid(
+        prd=prd,
+        architecture=arch,
+        repo_path=repo_path,
+        artifacts_dir=artifacts_dir,
+        model=planning_loop_model,
+        max_iterations=max_planning_loop_iterations,
+        permission_mode=permission_mode,
+        ai_provider=ai_provider,
+        workspace_manifest=workspace_manifest,
+    )
+
     # 4. Sprint planner decomposes into issues
     app.note("Phase 4: Sprint Planner", tags=["pipeline", "sprint_planner"])
     sprint_result = _unwrap(await app.call(
@@ -1685,6 +1757,7 @@ async def plan(
         architecture=arch,
         repo_path=repo_path,
         artifacts_dir=artifacts_dir,
+        planning_artifacts=planning_artifacts,
         model=sprint_planner_model,
         permission_mode=permission_mode,
         ai_provider=ai_provider,
@@ -1760,6 +1833,7 @@ async def plan(
         file_conflicts=file_conflicts,
         artifacts_dir=base,
         rationale=rationale,
+        planning_artifacts=planning_artifacts or None,
     ).model_dump()
 
 
