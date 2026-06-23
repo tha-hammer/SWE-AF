@@ -802,6 +802,7 @@ def _init_dag_state(
         all_issues=all_issues,
         levels=levels,
         build_id=build_id,
+        planning_artifacts=plan_result.get("planning_artifacts"),
         **git_kwargs,
     )
 

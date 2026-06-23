@@ -328,6 +328,9 @@ class DAGState(BaseModel):
         None  # Serialised WorkspaceManifest (dict for JSON compat)
     )
 
+    # --- DDD planning artifacts (carried from PlanResult for replan/observability) ---
+    planning_artifacts: dict | None = None
+
 
 class GitInitResult(BaseModel):
     """Result of git initialization."""

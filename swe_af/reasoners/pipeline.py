@@ -246,6 +246,29 @@ def validate_planning_artifacts(artifacts: "ArchitecturePlanningArtifacts | dict
     return errors
 
 
+def publish_planning_event(
+    *,
+    artifacts_dir: str,
+    event: "PlanningEvent | dict",
+    now: str | None = None,
+) -> None:
+    """Append a planner-observability event to ``<artifacts_dir>/plan/planning-events.jsonl``.
+
+    SWE-AF's own internal planning event stream — distinct from the target
+    project's ``internal_event_schema``. Pure and broker-free (no AgentField
+    dependency) so it runs in tests without a server. ``now`` injects the
+    timestamp deterministically when the event has no ``occurred_at``.
+    """
+    record = event.model_dump() if hasattr(event, "model_dump") else dict(event)
+    if now is not None and not record.get("occurred_at"):
+        record["occurred_at"] = now
+
+    plan_dir = Path(artifacts_dir) / "plan"
+    plan_dir.mkdir(parents=True, exist_ok=True)
+    with (plan_dir / "planning-events.jsonl").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record) + "\n")
+
+
 # ---------------------------------------------------------------------------
 # Reasoners
 # ---------------------------------------------------------------------------
