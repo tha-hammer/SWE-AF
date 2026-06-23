@@ -135,7 +135,9 @@ async def test_mock_agent_ai_side_effect_isolated_per_test_no_residual(mock_agen
 
 
 @pytest.mark.asyncio
-async def test_plan_then_execute_end_to_end_mock_pipeline(mock_agent_ai, tmp_path):
+async def test_plan_then_execute_end_to_end_mock_pipeline(
+    mock_agent_ai, tmp_path, complete_planning_artifacts_dict
+):
     """Full pipeline: plan() output passed directly to execute() must succeed.
 
     Interaction: test_planner_pipeline (branch 04) plan() output
@@ -192,7 +194,10 @@ async def test_plan_then_execute_end_to_end_mock_pipeline(mock_agent_ai, tmp_pat
     }
     issue_writer = {"success": True, "path": "/tmp/e2e.md"}
 
-    mock_agent_ai.side_effect = [prd, arch, review, sprint, issue_writer]
+    # The DDD planning loop runs between Tech Lead approval and Sprint Planner.
+    mock_agent_ai.side_effect = [
+        prd, arch, review, complete_planning_artifacts_dict, sprint, issue_writer
+    ]
 
     import swe_af.app as app_module
     real_plan = getattr(app_module.plan, "_original_func", app_module.plan)
