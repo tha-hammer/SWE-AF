@@ -179,6 +179,36 @@ def issue_writer_task_prompt(
         sections.append(f"  - Needs new tests: {guidance.get('needs_new_tests', True)}")
         sections.append(f"  - Deeper QA: {guidance.get('needs_deeper_qa', False)}")
 
+    # DDD planning context — rendered only when the issue carries the metadata.
+    if issue.get("bounded_context"):
+        sections.append(f"\n## Bounded Context\n{issue['bounded_context']}")
+    if issue.get("contract_refs"):
+        sections.append(
+            "\n## Code-Level Contracts\n"
+            + "\n".join(f"- {c}" for c in issue["contract_refs"])
+        )
+    if issue.get("domain_events"):
+        sections.append(
+            "\n## Domain Events\n" + "\n".join(f"- {e}" for e in issue["domain_events"])
+        )
+    if issue.get("read_models"):
+        sections.append(
+            "\n## CQRS-lite Read Models\n"
+            + "\n".join(f"- {r}" for r in issue["read_models"])
+        )
+    if issue.get("guardrails"):
+        sections.append(
+            "\n## Architectural Guardrails\n"
+            + "\n".join(f"- {g}" for g in issue["guardrails"])
+        )
+    if issue.get("observability"):
+        sections.append(
+            "\n## Observability Requirements\n"
+            + "\n".join(f"- {o}" for o in issue["observability"])
+        )
+    if issue.get("slice_role"):
+        sections.append(f"\n## Vertical Slice Role\n{issue['slice_role']}")
+
     # Reference documents
     sections.append(f"\n## PRD Summary\n{prd_summary}")
     sections.append(f"\n## Architecture Summary\n{architecture_summary}")

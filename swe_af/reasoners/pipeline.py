@@ -576,6 +576,7 @@ async def run_sprint_planner(
     architecture: dict,
     repo_path: str,
     artifacts_dir: str = ".artifacts",
+    planning_artifacts: dict | None = None,
     model: str = "sonnet",
     max_turns: int = DEFAULT_AGENT_MAX_TURNS,
     permission_mode: str = "",
@@ -585,6 +586,7 @@ async def run_sprint_planner(
     """Run the sprint planner to decompose work into executable issues.
 
     Returns a dict with ``issues`` (list of issue dicts) and ``rationale`` (str).
+    Optionally consumes DDD ``planning_artifacts`` to emit context-rich issues.
     """
     router.note("Sprint Planner starting", tags=["sprint_planner", "start"])
 
@@ -617,6 +619,7 @@ async def run_sprint_planner(
         goal=prd_obj.validated_description,
         prd=prd_obj,
         architecture=arch_obj,
+        planning_artifacts=planning_artifacts,
         workspace_manifest=ws_manifest,
         repo_path=repo_path,
         prd_path=paths["prd"],

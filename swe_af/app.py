@@ -1766,6 +1766,17 @@ async def plan(
     issues = sprint_result["issues"]
     rationale = sprint_result["rationale"]
 
+    # M1: deterministic vertical-slice guard — the guarantee must not be
+    # prompt-only. When DDD artifacts drove the sprint, at least one issue must be
+    # the end-to-end vertical slice. Degrade-don't-abort (consistent with C3).
+    if planning_artifacts and not any(
+        i.get("slice_role") == "vertical-slice" for i in issues
+    ):
+        app.note(
+            "Sprint plan has no vertical-slice issue (slice_role='vertical-slice')",
+            tags=["pipeline", "sprint_planner", "missing_vertical_slice"],
+        )
+
     # 5. Compute parallel execution levels & assign sequence numbers BEFORE issue writing
     levels = _compute_levels(issues)
     issues = _assign_sequence_numbers(issues, levels)
