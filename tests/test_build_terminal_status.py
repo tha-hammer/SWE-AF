@@ -57,6 +57,44 @@ def test_successful_pr_and_clean_verification_returns_completed_status() -> None
     assert status == "completed"
 
 
+def test_failed_prod_build_returns_failed_even_with_debt() -> None:
+    # A non-zero production build is never acceptable as debt (SWE-AF-gnm):
+    # it must override the completed_with_debt downgrade.
+    status = app_mod._execution_status(
+        verification={"passed": False, "build_passed": False, "summary": "build broke"},
+        dag_result={"accumulated_debt": [{"severity": "high"}], "failed_issues": []},
+    )
+
+    assert status == "failed"
+
+
+def test_failed_prod_build_returns_failed_even_when_criteria_pass() -> None:
+    # Criteria can all pass yet the prod build fail (bundler/static-export error).
+    status = app_mod._execution_status(
+        verification={"passed": True, "build_passed": False, "summary": "tests green, build red"},
+        dag_result={"accumulated_debt": [], "failed_issues": []},
+    )
+
+    assert status == "failed"
+
+
+def test_build_passed_absent_is_backward_compatible() -> None:
+    # Legacy verifications without build_passed must behave exactly as before.
+    status = app_mod._execution_status(
+        verification={"passed": True, "summary": "ok"},
+        dag_result={"accumulated_debt": [], "failed_issues": []},
+    )
+
+    assert status == "completed"
+
+
+def test_build_gate_failed_helper() -> None:
+    assert app_mod._build_gate_failed({"build_passed": False}) is True
+    assert app_mod._build_gate_failed({"build_passed": True}) is False
+    assert app_mod._build_gate_failed({}) is False  # absent → not failed
+    assert app_mod._build_gate_failed(None) is False
+
+
 def test_build_result_defaults_status_from_success_for_compat() -> None:
     result = BuildResult(plan_result={}, dag_state={}, success=False, summary="failed")
 

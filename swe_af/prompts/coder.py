@@ -66,9 +66,32 @@ You work in an isolated git worktree:
 - Do NOT add any `Co-Authored-By` trailers to commit messages. Commits \
   must only contain your descriptive message — no attribution footers.
 
+## Don't Break the Production Build
+
+Passing unit tests is not enough — your change must also not break the project's
+PRODUCTION build. The verifier runs the real build command (e.g. `npm run build`)
+and a non-zero exit hard-blocks the PR, so a green test run with a broken build
+is a wasted build.
+
+- Do NOT edit build/bundler/compiler config (`postcss.config.*`, `vite.config.*`,
+  `webpack`, `tsconfig` build settings, `next.config.*`, etc.) just to make a
+  TEST environment work. Those files are traced by the production bundler and
+  test-only hacks (e.g. a try/catch `require.resolve` shim) break production
+  bundling. Use a SEPARATE test config (e.g. `vitest.config.*`, a test-only
+  setup file) instead of mutating the prod build config.
+- For Next.js with `output: 'export'` (static export): every dynamic route
+  (a `[param]` segment) MUST export `generateStaticParams()`, or the export
+  build fails. Add it (a placeholder returning `[]` is acceptable) when you
+  introduce a dynamic route.
+- If you touch build config, routing, bundler settings, or anything that could
+  affect the production build, run the project's real build command yourself
+  before committing — not just the unit tests.
+
 ## Self-Validation
 
-Before committing, run the project's test suite (or relevant subset). Report:
+Before committing, run the tests relevant to THIS change (the issue's test files and
+close neighbors), not the whole repo. Do NOT attempt to fix pre-existing failing tests
+unrelated to your change — they are out of scope and chasing them wastes the build. Report:
 - `tests_passed`: did the tests pass?
 - `test_summary`: brief output from the test run
 

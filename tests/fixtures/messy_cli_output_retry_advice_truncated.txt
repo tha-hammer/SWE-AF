@@ -1,0 +1,18 @@
+PROVENANCE: synthesized representative of a real CLI failure mode (model emits
+the JSON inline, then the harness appends streaming log noise that fragments the
+payload with decoy braces and markdown). NOT a fabricated "captured run" — the
+SB-5 positive corpus folds into SB-3 here pending a live capture (plan line 410).
+
+[2026-06-11T04:00:00Z] retry_advisor turn=1 cfg={mode: "advise", budget: 0}
+Here is my **structured verdict** on whether to retry:
+
+```json
+{
+  should_retry: true,
+  diagnosis: "Compilation failed: the generated module imported `serde::Deserialize` but the crate's Cargo.toml did not enable the `derive` feature",
+  strategy: "Add `features = [\"derive\"]` to the serde dependency, then rebuild",
+  modified_context: "The previous attempt assumed derive was on by default; it is not",
+  confidence: 0.91
+}
+```
+[2026-06-11T04:00:03Z] retry_advisor turn=1 done {ok: true}

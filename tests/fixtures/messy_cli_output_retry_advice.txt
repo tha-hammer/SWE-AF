@@ -1,0 +1,18 @@
+The build failed during the verification phase. Here is my analysis of what
+went wrong and whether we should retry.
+
+Looking at the logs {note: the failure was in the test harness}, the root
+cause is clear. Below is my structured verdict.
+
+```json
+{
+  // The retry advisor's verdict — emitted inline instead of to the output file
+  'should_retry': True,
+  'diagnosis': "The integration test failed because the DB migration wasn't applied before the suite ran",
+  'strategy': 'Run alembic upgrade head in the setup step, then re-run the suite',
+  'modified_context': 'Ensure migrations run before tests; the previous attempt skipped this step',
+  'confidence': 0.82,
+}
+```
+
+Let me know if you need any more detail on the diagnosis.

@@ -404,6 +404,12 @@ class VerificationResult(BaseModel):
     criteria_results: list[CriterionResult]
     summary: str
     suggested_fixes: list[str] = []
+    # Hard gate: did the project's REAL production build command exit zero?
+    # A non-zero prod build is never shippable, so it blocks the PR regardless of
+    # debt (see _execution_status). Defaults True for backward compatibility —
+    # only an explicit False from the verifier triggers the gate.
+    build_passed: bool = True
+    build_command: str = ""  # The build command actually run (evidence)
 
 
 # ---------------------------------------------------------------------------
@@ -703,6 +709,17 @@ class BuildConfig(BaseModel):
     max_integration_test_retries: int = 1
     enable_integration_testing: bool = True
     max_coding_iterations: int = 5
+    # Deterministic backpressure rung in the inner coding loop: after the coder and
+    # before any LLM reviewer/QA, run the issue's declared check command in the
+    # worktree. A red blocks completion and re-feeds the real failure tail (bounded,
+    # then advisory). enable_deterministic_checks is the kill-switch.
+    enable_deterministic_checks: bool = True
+    max_deterministic_check_retries: int = 2
+    deterministic_check_timeout_seconds: int = 600
+    # Render reasoner output-shape sections via BAML output_format (claude/opencode
+    # prompt suffix) instead of raw JSON Schema. ~85% smaller; measured opt-in, so
+    # OFF until A/B'd. Unmappable schemas fall back to JSON Schema; codex untouched.
+    enable_baml_output_format: bool = False
     agent_max_turns: int = DEFAULT_AGENT_MAX_TURNS
     execute_fn_target: str = ""
     permission_mode: str = ""
@@ -837,6 +854,10 @@ class BuildConfig(BaseModel):
             "max_integration_test_retries": self.max_integration_test_retries,
             "enable_integration_testing": self.enable_integration_testing,
             "max_coding_iterations": self.max_coding_iterations,
+            "enable_deterministic_checks": self.enable_deterministic_checks,
+            "max_deterministic_check_retries": self.max_deterministic_check_retries,
+            "deterministic_check_timeout_seconds": self.deterministic_check_timeout_seconds,
+            "enable_baml_output_format": self.enable_baml_output_format,
             "agent_max_turns": self.agent_max_turns,
             "agent_timeout_seconds": self.agent_timeout_seconds,
             "max_advisor_invocations": self.max_advisor_invocations,
@@ -1010,6 +1031,11 @@ class ExecutionConfig(BaseModel):
     max_integration_test_retries: int = 1
     enable_integration_testing: bool = True
     max_coding_iterations: int = 5
+    # Deterministic backpressure rung (mirrored from BuildConfig — see there).
+    enable_deterministic_checks: bool = True
+    max_deterministic_check_retries: int = 2
+    deterministic_check_timeout_seconds: int = 600
+    enable_baml_output_format: bool = False  # mirrored from BuildConfig — see there
     agent_max_turns: int = DEFAULT_AGENT_MAX_TURNS
     permission_mode: str = ""
     agent_timeout_seconds: int = 2700  # 45 min

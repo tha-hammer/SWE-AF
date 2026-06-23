@@ -19,16 +19,17 @@ import time
 from collections.abc import Callable, Sequence
 from typing import Any
 
+from swe_af.execution._proc import _LOG_TAIL_CHARS, _tail
 from swe_af.execution.schemas import CIFailedCheck, CIWatchResult
+
+# Re-exported from _proc for backwards compatibility (tests/test_ci_gate.py and
+# other call sites import _tail / _LOG_TAIL_CHARS from this module).
+__all__ = ["_LOG_TAIL_CHARS", "_tail"]
 
 # Buckets (`gh pr checks --json bucket`) that mean "still running". Anything
 # outside this set is conclusive (pass/fail/cancel/skip).
 _PENDING_BUCKETS: frozenset[str] = frozenset({"pending", "queued"})
 _FAILURE_BUCKETS: frozenset[str] = frozenset({"fail", "cancel"})
-
-# Per-failure log tail size. Big enough to surface the actual error, small
-# enough to keep the CI-fixer prompt under control across multi-failure runs.
-_LOG_TAIL_CHARS: int = 3000
 
 # Regex to pull the run id out of the details_url returned by `gh pr checks`.
 # Expected shape: https://github.com/<owner>/<repo>/actions/runs/<run_id>/job/<job_id>
@@ -87,12 +88,6 @@ def _extract_run_id(details_url: str) -> str:
         return ""
     match = _RUN_ID_RE.search(details_url)
     return match.group(1) if match else ""
-
-
-def _tail(text: str, max_chars: int = _LOG_TAIL_CHARS) -> str:
-    if len(text) <= max_chars:
-        return text
-    return "…[truncated]…\n" + text[-max_chars:]
 
 
 def _fetch_failed_logs(

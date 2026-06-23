@@ -2,9 +2,32 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, field_validator
 
 from swe_af.hitl.ask_user import AskUserForm
+
+_MAX_COMMAND_LEN = 2000
+
+
+def _validate_command(value: str) -> str:
+    """Guarantee an ``AcceptanceCheck.command`` is present, sane, and runnable.
+
+    Presence/shape only — **not** safety. Commands are shell pipelines by design
+    (``| jq``, ``>``, ``&&``); the validator must not reject metacharacters. The
+    trust boundary is the worktree + container the harness already runs the agent's
+    Bash under. The single bound it enforces beyond non-emptiness is a length cap,
+    which catches a hallucinated essay-as-command.
+    """
+    if not value.strip():
+        raise ValueError("command must be a non-empty, non-whitespace string")
+    if len(value) > _MAX_COMMAND_LEN:
+        raise ValueError(
+            f"command exceeds {_MAX_COMMAND_LEN} chars (got {len(value)}); "
+            "likely a hallucinated essay rather than a runnable command"
+        )
+    return value
 
 
 class PRD(BaseModel):
@@ -75,6 +98,27 @@ class IssueGuidance(BaseModel):
     risk_rationale: str = ""              # Why this needs (or doesn't need) deep QA
 
 
+class AcceptanceCheck(BaseModel):
+    """A runnable, deterministic acceptance check authored by the planner.
+
+    ``command`` is a shell pipeline the harness runs via ``bash -c`` in the issue's
+    worktree; its exit code is the verdict (0 = green). The Pydantic validator
+    guarantees the command's *presence/shape* on **every** parse — both the
+    agentfield SDK path and the BAML fallback path — making it the always-on
+    validity guarantee (BAML asserts are not, because the bridge is fallback-first;
+    see Behavior 0). ``kind`` lets the resolver prefer ``test``/``build`` commands.
+    """
+
+    description: str
+    command: str
+    kind: Literal["build", "test", "check"] = "check"
+
+    @field_validator("command")
+    @classmethod
+    def _command_present_and_sane(cls, value: str) -> str:
+        return _validate_command(value)
+
+
 class PlannedIssue(BaseModel):
     """A single issue in the sprint plan."""
 
@@ -90,6 +134,7 @@ class PlannedIssue(BaseModel):
     testing_strategy: str = ""  # Test file paths, framework, coverage expectations
     sequence_number: int | None = None  # Assigned after topo sort, used in file/branch naming
     guidance: IssueGuidance | None = None  # Per-issue guidance from sprint planner
+    verification: list[AcceptanceCheck] = []  # Runnable checks for the deterministic rung
     target_repo: str = ""  # Target repository for multi-repo builds (empty = default/only repo)
 
 

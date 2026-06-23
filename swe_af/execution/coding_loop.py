@@ -22,6 +22,7 @@ import uuid
 from typing import Callable
 
 
+from swe_af.execution.deterministic_check import LocalRunner, _run_deterministic_gate
 from swe_af.execution.fatal_error import FatalHarnessError
 from swe_af.execution.schemas import (
     DAGState,
@@ -524,6 +525,7 @@ async def run_coding_loop(
     config: ExecutionConfig,
     note_fn: Callable | None = None,
     memory_fn: Callable | None = None,
+    local_runner: LocalRunner | None = None,
 ) -> IssueResult:
     """Run the coding loop for a single issue.
 
@@ -587,6 +589,7 @@ async def run_coding_loop(
     iteration_history: list[dict] = []
     files_changed: list[str] = []
     start_iteration = 1
+    det_check_attempts = 0  # consecutive deterministic-gate reds; bounds the rung
     is_first_success = len(dag_state.completed_issues) == 0
 
     # Resume from iteration checkpoint if available
@@ -596,6 +599,7 @@ async def run_coding_loop(
         feedback = existing_state.get("feedback", "")
         files_changed = existing_state.get("files_changed", [])
         iteration_history = existing_state.get("iteration_history", [])
+        det_check_attempts = existing_state.get("det_check_attempts", 0)
         if note_fn:
             note_fn(
                 f"Resuming {issue_name} from iteration {start_iteration}",
@@ -661,56 +665,95 @@ async def run_coding_loop(
 
         _save_artifact(dag_state.artifacts_dir, iteration_id, "coder", coder_result)
 
-        # --- 2. PATH BRANCH ---
-        if needs_deeper_qa:
-            # FLAGGED PATH: QA + reviewer parallel → synthesizer
-            action, summary, review_result, qa_result, synthesis_result = await _run_flagged_path(
-                call_fn=call_fn,
-                node_id=node_id,
-                worktree_path=worktree_path,
-                coder_result=coder_result,
-                issue=issue,
-                iteration=iteration,
-                iteration_id=iteration_id,
-                iteration_history=iteration_history,
-                project_context=project_context,
-                memory_context=memory_context,
-                config=config,
-                timeout=timeout,
-                issue_name=issue_name,
-                note_fn=note_fn,
-                workspace_manifest=ws_manifest_dict,
-                target_repo=target_repo,
+        # --- 1b. DETERMINISTIC BACKPRESSURE RUNG (cheapest-first, pre-LLM) ---
+        # Run the issue's own declared check in the worktree BEFORE any reviewer/QA.
+        # A red under the retry cap blocks completion and re-enters the coder with the
+        # real failure tail — zero LLM calls spent. At/over the cap it downgrades to
+        # advisory: the tail rides into the LLM path, which decides (no infinite loop).
+        gate = (
+            _run_deterministic_gate(
+                issue,
+                worktree_path,
+                config.deterministic_check_timeout_seconds,
+                runner=local_runner,
             )
-            _save_artifact(dag_state.artifacts_dir, iteration_id, "qa", qa_result)
-            _save_artifact(dag_state.artifacts_dir, iteration_id, "review", review_result)
-            _save_artifact(dag_state.artifacts_dir, iteration_id, "synthesis", synthesis_result)
-
-            # Stuck detection from synthesizer
-            stuck = synthesis_result.get("stuck", False) if synthesis_result else False
-        else:
-            # DEFAULT PATH: reviewer only
-            action, summary, review_result = await _run_default_path(
-                call_fn=call_fn,
-                node_id=node_id,
-                worktree_path=worktree_path,
-                coder_result=coder_result,
-                issue=issue,
-                iteration_id=iteration_id,
-                project_context=project_context,
-                memory_context=memory_context,
-                config=config,
-                timeout=timeout,
-                issue_name=issue_name,
-                note_fn=note_fn,
-                workspace_manifest=ws_manifest_dict,
-                target_repo=target_repo,
-            )
-            qa_result = None
-            synthesis_result = None
-            _save_artifact(dag_state.artifacts_dir, iteration_id, "review", review_result)
-
+            if config.enable_deterministic_checks
+            else None
+        )
+        if gate is not None and gate.red and det_check_attempts < config.max_deterministic_check_retries:
+            # Under the cap: block, re-enter the coder, skip the reviewer/QA branch.
+            # Fall through (NOT continue) so history/checkpoint/memory still run; the
+            # tail is carried in `summary` (the persisted field) and `feedback`.
+            det_check_attempts += 1
+            action, summary = "fix", gate.tail
+            review_result, qa_result, synthesis_result = None, None, None
             stuck = False
+            if note_fn:
+                note_fn(
+                    f"Deterministic check RED (attempt {det_check_attempts}/"
+                    f"{config.max_deterministic_check_retries}): {issue_name} — re-entering coder",
+                    tags=["coding_loop", "deterministic_gate", "red", issue_name],
+                )
+        else:
+            if gate is not None and gate.red:
+                # Cap reached → advisory: surface the tail to the reviewer, then let
+                # the existing LLM path decide (the kill-switch against looping).
+                coder_result["test_summary"] = (
+                    f"{coder_result.get('test_summary', '')}\n{gate.tail}".strip()
+                )
+            elif gate is not None and gate.ran:
+                det_check_attempts = 0  # green → reset the bound
+
+            # --- 2. PATH BRANCH ---
+            if needs_deeper_qa:
+                # FLAGGED PATH: QA + reviewer parallel → synthesizer
+                action, summary, review_result, qa_result, synthesis_result = await _run_flagged_path(
+                    call_fn=call_fn,
+                    node_id=node_id,
+                    worktree_path=worktree_path,
+                    coder_result=coder_result,
+                    issue=issue,
+                    iteration=iteration,
+                    iteration_id=iteration_id,
+                    iteration_history=iteration_history,
+                    project_context=project_context,
+                    memory_context=memory_context,
+                    config=config,
+                    timeout=timeout,
+                    issue_name=issue_name,
+                    note_fn=note_fn,
+                    workspace_manifest=ws_manifest_dict,
+                    target_repo=target_repo,
+                )
+                _save_artifact(dag_state.artifacts_dir, iteration_id, "qa", qa_result)
+                _save_artifact(dag_state.artifacts_dir, iteration_id, "review", review_result)
+                _save_artifact(dag_state.artifacts_dir, iteration_id, "synthesis", synthesis_result)
+
+                # Stuck detection from synthesizer
+                stuck = synthesis_result.get("stuck", False) if synthesis_result else False
+            else:
+                # DEFAULT PATH: reviewer only
+                action, summary, review_result = await _run_default_path(
+                    call_fn=call_fn,
+                    node_id=node_id,
+                    worktree_path=worktree_path,
+                    coder_result=coder_result,
+                    issue=issue,
+                    iteration_id=iteration_id,
+                    project_context=project_context,
+                    memory_context=memory_context,
+                    config=config,
+                    timeout=timeout,
+                    issue_name=issue_name,
+                    note_fn=note_fn,
+                    workspace_manifest=ws_manifest_dict,
+                    target_repo=target_repo,
+                )
+                qa_result = None
+                synthesis_result = None
+                _save_artifact(dag_state.artifacts_dir, iteration_id, "review", review_result)
+
+                stuck = False
 
         # Record iteration for history
         iteration_history.append({
@@ -735,6 +778,7 @@ async def run_coding_loop(
             "feedback": summary,
             "files_changed": files_changed,
             "iteration_history": iteration_history,
+            "det_check_attempts": det_check_attempts,
         }, build_id=dag_state.build_id)
 
         # --- 3. WRITE TO MEMORY ---

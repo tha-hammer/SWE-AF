@@ -4,6 +4,7 @@
 
 agentfield>=0.1.84
 pydantic>=2.0
+baml-py
 claude-agent-sdk==0.1.20
 hax-sdk>=0.2.4
 python-dotenv>=1.0

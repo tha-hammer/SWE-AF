@@ -551,9 +551,22 @@ def _has_successful_pr(pr_results: list[RepoPRResult]) -> bool:
     return any(r.success and r.pr_url for r in pr_results)
 
 
+def _build_gate_failed(verification: dict | None) -> bool:
+    """True when the verifier ran the production build and it exited non-zero.
+
+    A branch that cannot build is never shippable, so this is a hard failure
+    that overrides any accept-with-debt downgrade (SWE-AF-gnm). Defaults False
+    when build_passed is absent so legacy verifications are unaffected.
+    """
+    return bool(verification) and not verification.get("build_passed", True)
+
+
 def _execution_status(verification: dict | None, dag_result: dict) -> str:
     verification_passed = verification.get("passed", False) if verification else False
     if dag_result.get("failed_issues"):
+        return "failed"
+    # A failed production build is never acceptable as debt — gate before debt.
+    if _build_gate_failed(verification):
         return "failed"
     if _has_high_severity_debt(dag_result) or _has_accumulated_debt(dag_result):
         return "completed_with_debt"
@@ -1313,7 +1326,17 @@ async def build(
             verification=verification,
         )
 
-        if manifest and len(manifest.repos) > 1:
+        # Hard gate: a failed production build is never shippable — block the PR
+        # outright rather than opening a PR for a branch that cannot build
+        # (SWE-AF-gnm). Skips both the multi-repo and single-repo PR paths.
+        if _build_gate_failed(verification):
+            app.note(
+                "Production build failed verification — blocking PR "
+                f"(build_command={verification.get('build_command', '?') if verification else '?'}). "
+                "A branch that cannot build is never shippable.",
+                tags=["build", "github_pr", "blocked", "build-gate"],
+            )
+        elif manifest and len(manifest.repos) > 1:
             # Multi-repo: one PR per repo where create_pr=True
             app.note("Phase 4: Multi-repo Push + PRs", tags=["build", "github_pr", "multi-repo"])
             for ws_repo in manifest.repos:
