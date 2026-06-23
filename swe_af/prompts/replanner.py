@@ -131,6 +131,21 @@ def replanner_task_prompt(
     sections.append("\n## Architecture Summary")
     sections.append(dag_state.architecture_summary or "(not available)")
 
+    # --- DDD planning context (names only; helps recovery understand the domain) ---
+    planning = getattr(dag_state, "planning_artifacts", None)
+    if planning:
+        contexts = planning.get("bounded_contexts") or []
+        names = ", ".join(c.get("name", "") for c in contexts)
+        slice_ = planning.get("vertical_slice") or {}
+        sections.append("\n## DDD Planning Context")
+        if names:
+            sections.append(f"- Bounded contexts: {names}")
+        if slice_.get("bounded_context"):
+            sections.append(
+                f"- Vertical slice: {slice_.get('bounded_context')} "
+                f"({', '.join(slice_.get('domain_events', []))})"
+            )
+
     # --- Reference Paths ---
     sections.append("\n## Reference Paths (read these for full details)")
     sections.append(f"- PRD: {dag_state.prd_path}")

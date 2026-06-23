@@ -100,7 +100,11 @@ EXPOSE 8003
 
 ENV PORT=8003 \
     AGENTFIELD_SERVER=http://control-plane:8080 \
-    NODE_ID=swe-planner
+    NODE_ID=swe-planner \
+    # Runtime watchdog headroom (6h, the agentfield max). build() finalizes with
+    # completed work at its own (smaller) budget BEFORE this fires, so a green
+    # build is never reported "failed" by the watchdog. See _effective_build_budget_seconds.
+    default_execution_timeout=21600
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1

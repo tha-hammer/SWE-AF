@@ -19,7 +19,12 @@ from dotenv import load_dotenv
 load_dotenv()  # surface HAX_API_KEY (and friends) before Agent() is constructed
 
 from swe_af.reasoners import router
-from swe_af.reasoners.pipeline import _assign_sequence_numbers, _compute_levels, _validate_file_conflicts
+from swe_af.reasoners.pipeline import (
+    _assign_sequence_numbers,
+    _compute_levels,
+    _validate_file_conflicts,
+    validate_planning_artifacts,
+)
 from swe_af.reasoners.schemas import PlanResult, ReviewResult
 
 from agentfield import Agent
@@ -605,6 +610,38 @@ def _build_summary(
     return summary
 
 
+# agentfield's runtime watchdog default (async_config.default_execution_timeout).
+# The build derives its own budget below this so it finalizes the completed work
+# BEFORE the watchdog can cancel the reasoner and report a green build as "failed".
+_AGENTFIELD_DEFAULT_WATCHDOG_SECONDS = 7200.0
+
+
+def _effective_build_budget_seconds(cfg: "BuildConfig") -> float:
+    """The wall-clock budget after which build() finalizes with completed work.
+
+    Explicit ``cfg.build_budget_seconds`` wins; otherwise derive from the
+    agentfield runtime watchdog (``default_execution_timeout`` env) minus
+    ``cfg.build_budget_buffer_seconds`` so the build always finalizes first.
+    """
+    if cfg.build_budget_seconds and cfg.build_budget_seconds > 0:
+        return float(cfg.build_budget_seconds)
+    raw = os.getenv("default_execution_timeout", "") or os.getenv(
+        "DEFAULT_EXECUTION_TIMEOUT", ""
+    )
+    try:
+        watchdog = float(raw) if raw else _AGENTFIELD_DEFAULT_WATCHDOG_SECONDS
+    except ValueError:
+        watchdog = _AGENTFIELD_DEFAULT_WATCHDOG_SECONDS
+    return max(60.0, watchdog - float(cfg.build_budget_buffer_seconds))
+
+
+def _build_budget_exhausted(start_monotonic: float, budget_seconds: float) -> bool:
+    """True once the build has consumed its wall-clock budget."""
+    if budget_seconds <= 0:
+        return False
+    return (time.monotonic() - start_monotonic) >= budget_seconds
+
+
 @app.reasoner()
 async def build(
     goal: str,
@@ -654,6 +691,16 @@ async def build(
         raise ValueError("Either repo_path or repo_url must be provided")
 
     app.note(f"Build starting (build_id={build_id})", tags=["build", "start"])
+
+    # Overall build wall-clock budget. Once reached, the verify/fix loop stops
+    # launching new work and the build finalizes with the completed work, so a
+    # green build is never turned into "failed" by the agentfield runtime watchdog.
+    _build_start = time.monotonic()
+    _build_budget = _effective_build_budget_seconds(cfg)
+    app.note(
+        f"Build budget: {_build_budget:.0f}s (finalize before runtime watchdog)",
+        tags=["build", "budget"],
+    )
 
     # Scope key for the in-memory credentials store negotiated by the
     # environment scout. Shared by every reasoner in this build (run_id
@@ -1108,6 +1155,25 @@ async def build(
         prior_failed_criteria: list[dict] = []   # cross-cycle history (deduped)
         seen_prior_criteria: set[str] = set()
         for cycle in range(cfg.max_verify_fix_cycles + 1):
+            # Overall build budget gate: never START a verification/fix cycle once
+            # the budget is reached — finalize with the completed work instead of
+            # being cancelled mid-verifier by the runtime watchdog (which would
+            # report a green build as "failed"). The completed issues are already
+            # merged + checkpointed; we record the deferred verification as debt so
+            # the terminal status is completed_with_debt, not failed.
+            if _build_budget_exhausted(_build_start, _build_budget):
+                app.note(
+                    "Build budget reached — finalizing with completed work; "
+                    f"verification deferred (cycle {cycle})",
+                    tags=["build", "verify", "budget", "finalized"],
+                )
+                dag_result.setdefault("accumulated_debt", []).append({
+                    "type": "verification_incomplete",
+                    "criterion": "full acceptance verification",
+                    "reason": "build time budget reached before verification completed",
+                    "severity": "medium",
+                })
+                break
             app.note(f"Verification cycle {cycle}", tags=["build", "verify"])
             verification = _unwrap(await app.call(
                 f"{NODE_ID}.run_verifier",
@@ -1561,10 +1627,79 @@ async def build(
             ci_gate_results=ci_gate_results,
         ).model_dump()
 
+    except asyncio.CancelledError:
+        # The agentfield runtime watchdog (or a shutdown) cancelled the build
+        # mid-phase. Persist the latest completed work so it is not lost and
+        # resume_build can continue, then propagate. The budget gate above is the
+        # primary defense — this is the backstop if the budget was set too high.
+        _locals = locals()
+        try:
+            _dump_main_dag_result(
+                (_locals.get("plan_result") or {}).get("artifacts_dir", artifacts_dir),
+                _locals.get("dag_result") or {},
+            )
+        except Exception:
+            pass
+        app.note(
+            "Build cancelled by runtime watchdog — completed work persisted to "
+            "checkpoint/dag-result (resume_build can continue)",
+            tags=["build", "cancelled", "finalized"],
+        )
+        raise
+
     finally:
         if _scope_id:
             from swe_af.hitl import clear_scoped_credentials  # noqa: PLC0415
             clear_scoped_credentials(_scope_id)
+
+
+async def _run_architecture_planning_loop_until_valid(
+    *,
+    prd: dict,
+    architecture: dict,
+    repo_path: str,
+    artifacts_dir: str,
+    model: str,
+    max_iterations: int,
+    permission_mode: str,
+    ai_provider: str,
+    workspace_manifest: dict | None,
+) -> dict:
+    """Run the DDD planning loop, retrying with validator feedback until valid.
+
+    On exhausting ``max_iterations`` this does NOT raise — it force-accepts the
+    best artifacts and emits a warning note carrying the residual feedback,
+    mirroring the Tech Lead force-approve (degrade-don't-abort). Returns the
+    artifacts dict.
+    """
+    planning_artifacts: dict = {}
+    feedback: list[str] = []
+    for i in range(max_iterations):
+        planning_artifacts = _unwrap(await app.call(
+            f"{NODE_ID}.run_architecture_planning_loop",
+            prd=prd,
+            architecture=architecture,
+            repo_path=repo_path,
+            artifacts_dir=artifacts_dir,
+            validation_feedback=feedback,
+            model=model,
+            permission_mode=permission_mode,
+            ai_provider=ai_provider,
+            workspace_manifest=workspace_manifest,
+        ), "run_architecture_planning_loop")
+        feedback = validate_planning_artifacts(planning_artifacts)
+        if not feedback:
+            app.note("Planning loop validated", tags=["pipeline", "planning_loop", "ok"])
+            return planning_artifacts
+        app.note(
+            f"Planning loop validation failed (attempt {i + 1}): {len(feedback)} issues",
+            tags=["pipeline", "planning_loop", "retry"],
+        )
+    app.note(
+        f"Planning loop accepted with {len(feedback)} unresolved warnings: {feedback}",
+        tags=["pipeline", "planning_loop", "accepted_with_warnings"],
+    )
+    return planning_artifacts
 
 
 @app.reasoner()
@@ -1579,6 +1714,8 @@ async def plan(
     tech_lead_model: str = "sonnet",
     sprint_planner_model: str = "sonnet",
     issue_writer_model: str = "sonnet",
+    planning_loop_model: str = "sonnet",
+    max_planning_loop_iterations: int = 2,
     permission_mode: str = "",
     ai_provider: str = "claude",
     workspace_manifest: dict | None = None,
@@ -1677,6 +1814,22 @@ async def plan(
             summary=review["summary"] + " [auto-approved after max iterations]",
         ).model_dump()
 
+    # 3.5. DDD modular planning loop (Architect-owned): take the approved
+    # architecture one level deeper into typed bounded contexts + event backbone,
+    # validated deterministically, before Sprint Planner decomposes the work.
+    app.note("Phase 3.5: DDD Planning Loop", tags=["pipeline", "planning_loop"])
+    planning_artifacts = await _run_architecture_planning_loop_until_valid(
+        prd=prd,
+        architecture=arch,
+        repo_path=repo_path,
+        artifacts_dir=artifacts_dir,
+        model=planning_loop_model,
+        max_iterations=max_planning_loop_iterations,
+        permission_mode=permission_mode,
+        ai_provider=ai_provider,
+        workspace_manifest=workspace_manifest,
+    )
+
     # 4. Sprint planner decomposes into issues
     app.note("Phase 4: Sprint Planner", tags=["pipeline", "sprint_planner"])
     sprint_result = _unwrap(await app.call(
@@ -1685,6 +1838,7 @@ async def plan(
         architecture=arch,
         repo_path=repo_path,
         artifacts_dir=artifacts_dir,
+        planning_artifacts=planning_artifacts,
         model=sprint_planner_model,
         permission_mode=permission_mode,
         ai_provider=ai_provider,
@@ -1692,6 +1846,17 @@ async def plan(
     ), "run_sprint_planner")
     issues = sprint_result["issues"]
     rationale = sprint_result["rationale"]
+
+    # M1: deterministic vertical-slice guard — the guarantee must not be
+    # prompt-only. When DDD artifacts drove the sprint, at least one issue must be
+    # the end-to-end vertical slice. Degrade-don't-abort (consistent with C3).
+    if planning_artifacts and not any(
+        i.get("slice_role") == "vertical-slice" for i in issues
+    ):
+        app.note(
+            "Sprint plan has no vertical-slice issue (slice_role='vertical-slice')",
+            tags=["pipeline", "sprint_planner", "missing_vertical_slice"],
+        )
 
     # 5. Compute parallel execution levels & assign sequence numbers BEFORE issue writing
     levels = _compute_levels(issues)
@@ -1760,6 +1925,7 @@ async def plan(
         file_conflicts=file_conflicts,
         artifacts_dir=base,
         rationale=rationale,
+        planning_artifacts=planning_artifacts or None,
     ).model_dump()
 
 

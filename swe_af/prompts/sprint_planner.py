@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from swe_af.execution.schemas import WorkspaceManifest
-from swe_af.prompts._utils import workspace_context_block
+from swe_af.prompts._utils import planning_artifacts_context_block, workspace_context_block
 from swe_af.reasoners.schemas import Architecture, PRD
 
 SYSTEM_PROMPT = """\
@@ -339,6 +339,7 @@ def sprint_planner_task_prompt(
     goal: str,
     prd: dict | PRD,
     architecture: dict | Architecture,
+    planning_artifacts: dict | object | None = None,
     workspace_manifest: WorkspaceManifest | None = None,
     repo_path: str = "",
     prd_path: str = "",
@@ -389,6 +390,10 @@ def sprint_planner_task_prompt(
 
     if arch_summary:
         sections.append(f"## Architecture Summary\n{arch_summary}")
+
+    ddd_block = planning_artifacts_context_block(planning_artifacts)
+    if ddd_block:
+        sections.append(ddd_block)
 
     if repo_path or prd_path or architecture_path:
         ref_lines = ["## Reference Documents"]

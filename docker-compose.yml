@@ -19,6 +19,8 @@ services:
       - NODE_ID=swe-planner
       - PORT=8003
       - AGENT_CALLBACK_URL=http://swe-agent:8003
+      # Runtime watchdog headroom; build() finalizes at its own budget first.
+      - default_execution_timeout=${default_execution_timeout:-21600}
       - SWE_DEFAULT_RUNTIME=${SWE_DEFAULT_RUNTIME:-claude_code}
       - SWE_DEFAULT_MODEL=${SWE_DEFAULT_MODEL:-}
       - SWE_CODEX_AUTH_MODE=${SWE_CODEX_AUTH_MODE:-auto}

@@ -18,7 +18,9 @@ from swe_af.execution.fatal_error import check_fatal_harness_error
 from swe_af.execution.schemas import DEFAULT_AGENT_MAX_TURNS
 from swe_af.reasoners.schemas import (
     Architecture,
+    ArchitecturePlanningArtifacts,
     PlannedIssue,
+    PlanningEvent,
     PRD,
     ReviewResult,
 )
@@ -148,6 +150,123 @@ def _assign_sequence_numbers(issues: list[dict], levels: list[list[str]]) -> lis
                 issue_by_name[issue["name"]]["sequence_number"] = counter
                 counter += 1
     return list(issue_by_name.values())
+
+
+def validate_planning_artifacts(artifacts: "ArchitecturePlanningArtifacts | dict") -> list[str]:
+    """Deterministically validate DDD planning artifacts; return actionable errors.
+
+    Pure (no LLM calls). Returns a list of human-readable error strings suitable
+    for retry feedback — an empty list means the artifacts pass. Accepts either an
+    ``ArchitecturePlanningArtifacts`` model or its ``model_dump()`` dict (``plan()``
+    passes the dict form, since ``app.call`` returns a model dump).
+    """
+    data = artifacts.model_dump() if hasattr(artifacts, "model_dump") else dict(artifacts or {})
+    errors: list[str] = []
+
+    def _mermaid(key: str, label: str) -> None:
+        diagram = data.get(key) or {}
+        if not str(diagram.get("mermaid", "")).strip():
+            errors.append(f"{label} missing Mermaid source")
+
+    _mermaid("current_diagram", "Current diagram")
+    _mermaid("future_diagram", "Future diagram")
+
+    contexts = data.get("bounded_contexts") or []
+    if not contexts:
+        errors.append("at least one bounded context is required")
+    for ctx in contexts:
+        name = ctx.get("name", "(unnamed)")
+        if not ctx.get("aggregates"):
+            errors.append(f"bounded context {name!r} has no aggregates")
+        if not ctx.get("domain_services"):
+            errors.append(f"bounded context {name!r} has no domain services")
+        if not ctx.get("domain_events"):
+            errors.append(f"bounded context {name!r} has no domain event")
+        for ev in ctx.get("domain_events") or []:
+            if not str(ev.get("producer_context", "")).strip():
+                errors.append(
+                    f"domain event {ev.get('name', '?')!r} has no producer_context"
+                )
+
+    backbone = data.get("event_backbone") or {}
+    transport = str(backbone.get("default_transport", "")).strip()
+    if transport != "in_process" and not str(backbone.get("migration_justification", "")).strip():
+        errors.append(
+            f"event backbone default_transport={transport!r} requires a non-empty "
+            "migration_justification (default is in_process)"
+        )
+
+    schema = data.get("internal_event_schema") or {}
+    if not str(schema.get("event_name", "")).strip():
+        errors.append("internal event schema missing event_name")
+    if not str(schema.get("event_version", "")).strip():
+        errors.append("internal event schema missing event_version (versioning rule)")
+    if not schema.get("metadata_fields"):
+        errors.append("internal event schema missing metadata_fields")
+    if not schema.get("payload_fields"):
+        errors.append("internal event schema missing payload_fields")
+
+    ownership = data.get("data_ownership") or []
+    if not ownership:
+        errors.append("data ownership rules are required")
+    for rule in ownership:
+        if not (rule.get("owns") or rule.get("reads")):
+            errors.append(
+                f"data ownership rule for {rule.get('bounded_context', '?')!r} "
+                "must own or read data explicitly"
+            )
+
+    read_models = data.get("read_models") or []
+    if not read_models:
+        errors.append("at least one CQRS-lite read model is required")
+    for rm in read_models:
+        if not rm.get("source_events"):
+            errors.append(f"read model {rm.get('name', '?')!r} references no source_events")
+
+    guardrails = data.get("guardrails") or []
+    if not guardrails:
+        errors.append("architectural guardrails are required")
+    for g in guardrails:
+        if not str(g.get("enforcement", "")).strip():
+            errors.append(f"guardrail {g.get('rule', '?')!r} has no enforcement mechanism")
+
+    if not data.get("observability"):
+        errors.append("observability requirements are required")
+
+    slice_ = data.get("vertical_slice") or {}
+    if not str(slice_.get("bounded_context", "")).strip():
+        errors.append("vertical slice must reference a bounded_context")
+    if not slice_.get("domain_events"):
+        errors.append("vertical slice must reference at least one domain event")
+
+    extraction = data.get("extraction_strategy") or {}
+    if extraction.get("gated_on") != "tested_slice":
+        errors.append("extraction strategy must be gated_on a tested_slice")
+
+    return errors
+
+
+def publish_planning_event(
+    *,
+    artifacts_dir: str,
+    event: "PlanningEvent | dict",
+    now: str | None = None,
+) -> None:
+    """Append a planner-observability event to ``<artifacts_dir>/plan/planning-events.jsonl``.
+
+    SWE-AF's own internal planning event stream — distinct from the target
+    project's ``internal_event_schema``. Pure and broker-free (no AgentField
+    dependency) so it runs in tests without a server. ``now`` injects the
+    timestamp deterministically when the event has no ``occurred_at``.
+    """
+    record = event.model_dump() if hasattr(event, "model_dump") else dict(event)
+    if now is not None and not record.get("occurred_at"):
+        record["occurred_at"] = now
+
+    plan_dir = Path(artifacts_dir) / "plan"
+    plan_dir.mkdir(parents=True, exist_ok=True)
+    with (plan_dir / "planning-events.jsonl").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record) + "\n")
 
 
 # ---------------------------------------------------------------------------
@@ -480,6 +599,7 @@ async def run_sprint_planner(
     architecture: dict,
     repo_path: str,
     artifacts_dir: str = ".artifacts",
+    planning_artifacts: dict | None = None,
     model: str = "sonnet",
     max_turns: int = DEFAULT_AGENT_MAX_TURNS,
     permission_mode: str = "",
@@ -489,6 +609,7 @@ async def run_sprint_planner(
     """Run the sprint planner to decompose work into executable issues.
 
     Returns a dict with ``issues`` (list of issue dicts) and ``rationale`` (str).
+    Optionally consumes DDD ``planning_artifacts`` to emit context-rich issues.
     """
     router.note("Sprint Planner starting", tags=["sprint_planner", "start"])
 
@@ -521,6 +642,7 @@ async def run_sprint_planner(
         goal=prd_obj.validated_description,
         prd=prd_obj,
         architecture=arch_obj,
+        planning_artifacts=planning_artifacts,
         workspace_manifest=ws_manifest,
         repo_path=repo_path,
         prd_path=paths["prd"],
@@ -547,3 +669,111 @@ async def run_sprint_planner(
         "issues": [issue.model_dump() for issue in result.parsed.issues],
         "rationale": result.parsed.rationale,
     }
+
+
+def render_planning_artifacts_markdown(artifacts: dict) -> str:
+    """Render DDD planning artifacts as a readable architecture appendix."""
+    lines: list[str] = ["# DDD Modular Planning Artifacts", ""]
+
+    for key, label in (("current_diagram", "Current Software Diagram"),
+                       ("future_diagram", "Future Software Diagram")):
+        diagram = artifacts.get(key) or {}
+        lines += [f"## {label}", "", "```mermaid", diagram.get("mermaid", ""), "```", ""]
+
+    lines += ["## Bounded Contexts", ""]
+    for ctx in artifacts.get("bounded_contexts", []):
+        lines.append(f"### {ctx.get('name', '')}")
+        if ctx.get("purpose"):
+            lines.append(ctx["purpose"])
+        aggs = ", ".join(a.get("name", "") for a in ctx.get("aggregates", []))
+        svcs = ", ".join(s.get("name", "") for s in ctx.get("domain_services", []))
+        evts = ", ".join(e.get("name", "") for e in ctx.get("domain_events", []))
+        lines += [f"- Aggregates: {aggs}", f"- Domain services: {svcs}",
+                  f"- Domain events: {evts}", ""]
+
+    backbone = artifacts.get("event_backbone") or {}
+    lines += [
+        "## Internal Event Backbone",
+        f"- Default transport: `{backbone.get('default_transport', '')}`",
+    ]
+    if backbone.get("migration_justification"):
+        lines.append(f"- Migration justification: {backbone['migration_justification']}")
+    lines.append("")
+
+    slice_ = artifacts.get("vertical_slice") or {}
+    lines += [
+        "## Vertical Slice",
+        f"- Bounded context: {slice_.get('bounded_context', '')}",
+        f"- Domain events: {', '.join(slice_.get('domain_events', []))}",
+        "",
+        "## Extraction Strategy",
+        f"- Gated on: `{(artifacts.get('extraction_strategy') or {}).get('gated_on', '')}`",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+@router.reasoner()
+async def run_architecture_planning_loop(
+    prd: dict,
+    architecture: dict,
+    repo_path: str,
+    artifacts_dir: str = ".artifacts",
+    validation_feedback: list[str] | None = None,
+    model: str = "sonnet",
+    max_turns: int = DEFAULT_AGENT_MAX_TURNS,
+    permission_mode: str = "",
+    ai_provider: str = "claude",
+    workspace_manifest: dict | None = None,
+) -> dict:
+    """Run the Architect-owned DDD planning loop; return the artifacts as a dict.
+
+    Optionally takes ``validation_feedback`` from a prior failed validation so the
+    architect can repair specific gaps on retry.
+    """
+    router.note("Planning loop starting", tags=["planning_loop", "start"])
+
+    base = os.path.join(os.path.abspath(repo_path), artifacts_dir)
+    paths = _ensure_paths(base)
+    planning_path = os.path.join(paths["plan"], "architecture-planning.md")
+
+    prd_obj = PRD(**prd)
+    arch_obj = Architecture(**architecture)
+    from swe_af.prompts.architecture_planning_loop import (  # noqa: PLC0415
+        SYSTEM_PROMPT,
+        architecture_planning_loop_task_prompt,
+    )
+    from swe_af.execution.schemas import WorkspaceManifest  # noqa: PLC0415
+
+    ws_manifest = WorkspaceManifest(**workspace_manifest) if workspace_manifest else None
+    task_prompt = architecture_planning_loop_task_prompt(
+        prd=prd_obj,
+        architecture=arch_obj,
+        repo_path=repo_path,
+        architecture_path=paths["architecture"],
+        planning_artifacts_path=planning_path,
+        validation_feedback=validation_feedback,
+        workspace_manifest=ws_manifest,
+    )
+    provider = runtime_to_harness_adapter(ai_provider)
+    result = await router.harness(
+        prompt=task_prompt,
+        schema=ArchitecturePlanningArtifacts,
+        provider=provider,
+        model=model,
+        max_turns=max_turns,
+        tools=["Read", "Write", "Glob", "Grep"],
+        permission_mode=permission_mode or None,
+        system_prompt=SYSTEM_PROMPT,
+        cwd=repo_path,
+    )
+    check_fatal_harness_error(result)
+    if result.parsed is None:
+        raise RuntimeError("Planning loop failed to produce valid artifacts")
+
+    artifacts = result.parsed.model_dump()
+    Path(planning_path).write_text(
+        render_planning_artifacts_markdown(artifacts), encoding="utf-8"
+    )
+    router.note("Planning loop complete", tags=["planning_loop", "complete"])
+    return artifacts

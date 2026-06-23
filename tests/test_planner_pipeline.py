@@ -115,6 +115,53 @@ def _make_issue_writer_result_dict() -> dict[str, Any]:
     return {"success": True, "path": "/tmp/test-issue.md"}
 
 
+def _make_planning_artifacts_dict() -> dict[str, Any]:
+    """A valid ArchitecturePlanningArtifacts dict (passes validate_planning_artifacts)."""
+    from swe_af.reasoners.schemas import (
+        AggregateSpec,
+        ArchitectureDiagram,
+        ArchitecturePlanningArtifacts,
+        ArchitecturalGuardrail,
+        BoundedContextSpec,
+        DataOwnershipRule,
+        DomainEventSpec,
+        DomainServiceSpec,
+        EventBackbonePlan,
+        ExtractionStrategy,
+        InternalEventField,
+        InternalEventSchemaSpec,
+        ObservabilityRequirement,
+        ReadModelSpec,
+        VerticalSlicePlan,
+    )
+
+    return ArchitecturePlanningArtifacts(
+        current_diagram=ArchitectureDiagram(mermaid="flowchart LR\n A-->B"),
+        future_diagram=ArchitectureDiagram(mermaid="flowchart TB\n A-->B"),
+        bounded_contexts=[
+            BoundedContextSpec(
+                name="Core",
+                aggregates=[AggregateSpec(name="Thing")],
+                domain_services=[DomainServiceSpec(name="ThingService")],
+                domain_events=[DomainEventSpec(name="ThingHappened", producer_context="Core")],
+            )
+        ],
+        internal_event_schema=InternalEventSchemaSpec(
+            event_name="ThingHappened",
+            event_version="v1",
+            metadata_fields=[InternalEventField(name="correlation_id")],
+            payload_fields=[InternalEventField(name="thing_id")],
+        ),
+        data_ownership=[DataOwnershipRule(bounded_context="Core", owns=["things"])],
+        event_backbone=EventBackbonePlan(default_transport="in_process"),
+        read_models=[ReadModelSpec(name="ThingView", source_events=["ThingHappened"])],
+        guardrails=[ArchitecturalGuardrail(rule="no cross imports", enforcement="review")],
+        observability=[ObservabilityRequirement(name="emit ThingHappened")],
+        vertical_slice=VerticalSlicePlan(bounded_context="Core", domain_events=["ThingHappened"]),
+        extraction_strategy=ExtractionStrategy(gated_on="tested_slice"),
+    ).model_dump()
+
+
 # ---------------------------------------------------------------------------
 # Shared plan() invocation helper
 # ---------------------------------------------------------------------------
@@ -165,16 +212,18 @@ async def test_plan_happy_path(mock_agent_ai, tmp_path):
     prd = _make_prd_dict()
     arch = _make_architecture_dict()
     review = _make_review_approved_dict()
+    planning = _make_planning_artifacts_dict()
     sprint = _make_sprint_result_dict()
     issue_writer = _make_issue_writer_result_dict()
 
     # app.call is called in order:
-    #   1. run_product_manager  → prd dict
-    #   2. run_architect        → arch dict
-    #   3. run_tech_lead        → review (approved=True) → loop exits
-    #   4. run_sprint_planner   → sprint dict
-    #   5. run_issue_writer     → issue_writer dict (gathered)
-    mock_agent_ai.side_effect = [prd, arch, review, sprint, issue_writer]
+    #   1. run_product_manager           → prd dict
+    #   2. run_architect                 → arch dict
+    #   3. run_tech_lead                 → review (approved=True) → loop exits
+    #   4. run_architecture_planning_loop → planning artifacts (valid → no retry)
+    #   5. run_sprint_planner            → sprint dict
+    #   6. run_issue_writer              → issue_writer dict (gathered)
+    mock_agent_ai.side_effect = [prd, arch, review, planning, sprint, issue_writer]
 
     result = await _call_plan(str(tmp_path))
 
@@ -206,10 +255,11 @@ async def test_plan_pm_parsed_none(mock_agent_ai, tmp_path):
 
     arch = _make_architecture_dict()
     review = _make_review_approved_dict()
+    planning = _make_planning_artifacts_dict()
     sprint = _make_sprint_result_dict()
     issue_writer = _make_issue_writer_result_dict()
 
-    mock_agent_ai.side_effect = [bad_prd, arch, review, sprint, issue_writer]
+    mock_agent_ai.side_effect = [bad_prd, arch, review, planning, sprint, issue_writer]
 
     with pytest.raises(Exception):
         await _call_plan(str(tmp_path))
@@ -243,12 +293,14 @@ async def test_plan_tech_lead_rejects_with_max_iterations_one(mock_agent_ai, tmp
     #  5. TechLead (i=1) → rejected  (loop ends, force-approve)
     #  6. SprintPlanner → sprint
     #  7. IssueWriter → issue_writer
+    planning = _make_planning_artifacts_dict()
     mock_agent_ai.side_effect = [
         prd,        # run_product_manager
         arch,       # run_architect (initial)
         rejected,   # run_tech_lead (i=0)
         arch,       # run_architect (revision)
         rejected,   # run_tech_lead (i=1)
+        planning,   # run_architecture_planning_loop (after force-approve)
         sprint,     # run_sprint_planner
         issue_writer,  # run_issue_writer
     ]
@@ -313,10 +365,12 @@ async def test_plan_returns_dict_with_levels(mock_agent_ai, tmp_path):
     issue_writer_a = {"success": True, "path": "/tmp/alpha.md"}
     issue_writer_b = {"success": True, "path": "/tmp/beta.md"}
 
+    planning = _make_planning_artifacts_dict()
     mock_agent_ai.side_effect = [
         prd,
         arch,
         review,
+        planning,
         sprint,
         issue_writer_a,
         issue_writer_b,
@@ -336,3 +390,71 @@ async def test_plan_returns_dict_with_levels(mock_agent_ai, tmp_path):
     # Both in level 0 (same parallel level)
     assert "issue-alpha" in levels[0]
     assert "issue-beta" in levels[0]
+
+
+# ---------------------------------------------------------------------------
+# Behavior 4: planning loop runs before Sprint Planner, with retry + force-accept
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_plan_runs_architecture_planning_loop_before_sprint_planner(mock_agent_ai, tmp_path):
+    prd = _make_prd_dict()
+    arch = _make_architecture_dict()
+    review = _make_review_approved_dict()
+    planning = _make_planning_artifacts_dict()
+    sprint = _make_sprint_result_dict()
+    issue_writer = _make_issue_writer_result_dict()
+    mock_agent_ai.side_effect = [prd, arch, review, planning, sprint, issue_writer]
+
+    result = await _call_plan(str(tmp_path))
+
+    targets = [c.args[0] for c in mock_agent_ai.call_args_list]
+    assert targets.index("swe-planner.run_architecture_planning_loop") < targets.index(
+        "swe-planner.run_sprint_planner"
+    )
+    assert "planning_artifacts" in result
+    assert result["planning_artifacts"]["event_backbone"]["default_transport"] == "in_process"
+
+
+@pytest.mark.asyncio
+async def test_plan_retries_planning_loop_with_validation_feedback(mock_agent_ai, tmp_path):
+    prd = _make_prd_dict()
+    arch = _make_architecture_dict()
+    review = _make_review_approved_dict()
+    invalid_artifacts: dict = {}  # empty → validation produces feedback
+    valid_artifacts = _make_planning_artifacts_dict()
+    sprint = _make_sprint_result_dict()
+    issue_writer = _make_issue_writer_result_dict()
+    mock_agent_ai.side_effect = [
+        prd, arch, review, invalid_artifacts, valid_artifacts, sprint, issue_writer
+    ]
+
+    await _call_plan(str(tmp_path), max_planning_loop_iterations=2)
+
+    loop_calls = [
+        c for c in mock_agent_ai.call_args_list
+        if "run_architecture_planning_loop" in c.args[0]
+    ]
+    assert len(loop_calls) == 2
+    assert loop_calls[1].kwargs["validation_feedback"]  # 2nd call carries feedback
+
+
+@pytest.mark.asyncio
+async def test_plan_force_accepts_after_exhausting_planning_loop(mock_agent_ai, tmp_path):
+    # C3: exhausting retries must NOT raise — proceed to Sprint Planner anyway.
+    prd = _make_prd_dict()
+    arch = _make_architecture_dict()
+    review = _make_review_approved_dict()
+    invalid_artifacts: dict = {}
+    sprint = _make_sprint_result_dict()
+    issue_writer = _make_issue_writer_result_dict()
+    mock_agent_ai.side_effect = [
+        prd, arch, review, invalid_artifacts, invalid_artifacts, sprint, issue_writer
+    ]
+
+    result = await _call_plan(str(tmp_path), max_planning_loop_iterations=2)
+
+    targets = [c.args[0] for c in mock_agent_ai.call_args_list]
+    assert "swe-planner.run_sprint_planner" in targets  # reached sprint planner anyway
+    assert "planning_artifacts" in result
