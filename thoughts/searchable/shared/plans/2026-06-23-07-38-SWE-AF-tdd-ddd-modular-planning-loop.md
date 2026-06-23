@@ -1,13 +1,15 @@
 ---
 date: 2026-06-23T07:38:54-04:00
 author: maceo
-git_commit: 8f262273d424f7ea53171b7b1c204cd70420cb5a
-branch: main
+git_commit: 85a114e   # merged tree: feat/baml-structured-output merged into main
+base_branch: main
 repository: SWE-AF
 topic: "DDD modular planning loop for Architect and Sprint Planner"
 tags: [tdd, plan, planning, architect, ddd, modularity, bounded-contexts, event-backbone, cqrs-lite, observability]
-status: draft
+status: revised   # addresses review 2026-06-23 (…-REVIEW.md)
 beads_issue: SWE-AF-cl2
+review_issue: SWE-AF-x7m
+review: thoughts/searchable/shared/plans/2026-06-23-07-38-SWE-AF-tdd-ddd-modular-planning-loop-REVIEW.md
 research:
   - thoughts/searchable/shared/research/2026-06-23-06-45-architect-planning-agent-contracts.md
   - thoughts/searchable/shared/research/2026-06-17-07-54-agent-prompt-seams-implementer-generalization.md
@@ -16,6 +18,45 @@ last_updated: 2026-06-23
 ---
 
 # DDD Modular Planning Loop - TDD Implementation Plan
+
+## Base Branch & Commit (read first)
+
+Implement on **`main` at commit `85a114e`** — the merge of
+`feat/baml-structured-output` into `main`, which is now the single canonical
+SWE-AF line (resolves review finding **C1**). All file:line references in this
+plan were re-anchored against that merged tree (the previous draft pointed at
+pre-merge `main`, where the planner sat at different lines). The BAML merge
+already added `PlannedIssue.verification: list[AcceptanceCheck]` and
+`AcceptanceCheck`; the new DDD fields below are additive alongside those — no
+collision.
+
+## Review Revisions (how each finding is addressed)
+
+This draft incorporates the 2026-06-23 pre-implementation review
+(`…-REVIEW.md`, tracked by `SWE-AF-x7m`):
+
+- **C1 Branch target** → base is now merged `main@85a114e`; all line numbers
+  re-anchored (see *Current State Analysis* and *References*).
+- **C2 Existing tests break** → Behavior 4 now has an explicit task to *update*
+  the 7 existing planner tests' `side_effect`/`call_count`, not just add new ones.
+- **C3 Raise vs force-approve** → Behavior 4 no longer raises on validator
+  exhaustion; it force-accepts the best artifacts and records the residual
+  feedback as a warning, mirroring the Tech Lead loop (`app.py:1669-1678`).
+- **W1 Non-deterministic validator checks** → Behavior 2 makes the transport and
+  extraction-gating checks concrete (field-based, not prose judgement).
+- **W2 Shared fixture** → a single `complete_planning_artifacts` conftest fixture
+  is defined once (see *Testing Strategy*) and reused across test files.
+- **W3 Field-name drift** → Behavior 1's round-trip test locks the exact field
+  names the validator reads; the schema is the single source of truth.
+- **W4 Two "event" concepts** → clarified: the target project's
+  `internal_event_schema` vs SWE-AF's own `PlanningEvent` observability stream.
+- **W5 `PlanningEvent` model** → added to Behavior 1's schema set and Behavior 8,
+  with an injected clock for deterministic tests.
+- **W6 Config threading** → Behavior 4 notes the two new `plan()` params are
+  defaults-only for this slice (production config plumbing is out of scope here).
+- **M1–M4** → deterministic vertical-slice check, in-Green loop extraction,
+  explicit validator dict-input test, and confirmed docs files — folded into the
+  relevant Behaviors.
 
 ## Overview
 
@@ -57,15 +98,30 @@ then minimal code, then refactoring once tests are green.
 
 - `plan()` orchestrates Product Manager, optional Environment Scout, Architect,
   Tech Lead review, Sprint Planner, level computation, issue writing, and
-  `PlanResult` creation in `swe_af/app.py:1547`.
-- The best insertion point is after Tech Lead approval and before Sprint Planner at
-  `swe_af/app.py:1657`, because that preserves the existing execution handoff.
-- Planning schemas live in `swe_af/reasoners/schemas.py:10`. `Architecture` is
-  generic today, and no schema names bounded contexts, aggregates, domain events,
-  event backbone, CQRS-lite read models, data ownership, guardrails, or extraction
-  strategy.
-- Planning reasoners live in `swe_af/reasoners/pipeline.py`. The existing pattern is
-  prompt module + Pydantic schema + `router.harness(..., schema=...)` + `app.call()`.
+  `PlanResult` creation at `swe_af/app.py:1570` (`@app.reasoner()` @1570,
+  `async def plan` @1571; returns `PlanResult(...).model_dump()` @ ~1754).
+  `NODE_ID` is `swe-planner` (`app.py:36`).
+- The Sprint Planner is called at `swe_af/app.py:1682`; the insertion point for the
+  new planning loop is **`app.py:1680`** (immediately before the Phase-4
+  `app.note(...)`), after Tech Lead approval. The in-scope variables are `prd`,
+  `arch`, and `review`.
+- The Tech Lead review loop FORCE-APPROVES after `max_review_iterations`
+  (`app.py:1669-1678`, appends `" [auto-approved after max iterations]"`); it does
+  NOT raise. The new validator loop matches this degrade-don't-abort contract.
+- Planning schemas live in `swe_af/reasoners/schemas.py` (`Architecture` @62,
+  `PlannedIssue` @122, `PlanResult` @141). None set `extra="forbid"`, so additive
+  optional fields are safe. No schema names bounded contexts, aggregates, domain
+  events, event backbone, CQRS-lite read models, data ownership, guardrails, or
+  extraction strategy. `PlannedIssue` already carries a BAML-added
+  `verification: list[AcceptanceCheck]` field (@137) — the new DDD fields are
+  additive alongside it.
+- Planning reasoners live in `swe_af/reasoners/pipeline.py` (`run_sprint_planner`
+  @478, `router.harness(..., schema=SprintPlanOutput)` @530, returns a dict via
+  `model_dump()` @546). Pure non-LLM helpers returning lists already exist
+  (`_compute_levels` @52, `_validate_file_conflicts` @93, `_assign_sequence_numbers`
+  @134) — `validate_planning_artifacts` follows that pattern. The reasoner pattern
+  is prompt module + Pydantic schema + `router.harness(..., schema=...)` +
+  `app.call()`.
 - Existing prompt tests use signature assertions and literal prompt-content checks in
   `tests/test_multi_repo_prompts.py`.
 - Existing planner tests call `plan._original_func` with `mock_agent_ai.side_effect`
@@ -234,6 +290,18 @@ When a user runs the full planner:
   sections/terms exist.
 - **Mocking**: use `mock_agent_ai` from `tests/conftest.py`; bypass AgentField
   wrappers with `plan._original_func` as existing planner tests do.
+- **Shared fixture (W2)**: define ONE `complete_planning_artifacts` fixture in
+  `tests/conftest.py` that returns a fully populated, validator-passing
+  `ArchitecturePlanningArtifacts`. Every test that needs a valid artifact
+  (round-trip, validator, prompts, retry) consumes this single fixture so the
+  schema↔validator↔prompt contract cannot drift across files. A derived
+  `enriched_issue` fixture (a `PlannedIssue` carrying bounded-context metadata) and
+  the artifact's `model_dump()` (`complete_planning_artifacts_dict`) live beside it.
+- **`mock_agent_ai.side_effect` ordering**: Environment Scout is OFF in tests
+  (`HAX_API_KEY` unset), so the sub-call order is deterministic:
+  PM → Architect → Tech Lead(×n) → **planning loop(×n)** → Sprint Planner →
+  Issue Writer(×issues). Insert the planning-loop mock(s) right after the last
+  Tech Lead result and before the Sprint Planner result.
 - **Commands**:
   - `AGENTFIELD_SERVER=http://localhost:9999 python -m pytest tests/test_planning_artifacts_schema.py -q`
   - `AGENTFIELD_SERVER=http://localhost:9999 python -m pytest tests/test_planning_artifact_prompts.py -q`
@@ -285,12 +353,37 @@ def test_plan_result_defaults_without_planning_artifacts():
     assert result.planning_artifacts is None
 
 
-def test_complete_planning_artifacts_round_trip():
-    artifacts = ArchitecturePlanningArtifacts(...)
-    dumped = artifacts.model_dump()
+def test_complete_planning_artifacts_round_trip(complete_planning_artifacts):
+    # W3: lock the EXACT field names validate_planning_artifacts depends on, so the
+    # schema and validator cannot drift apart. The schema is the source of truth;
+    # the validator reads these same keys.
+    dumped = complete_planning_artifacts.model_dump()
     assert dumped["current_diagram"]["mermaid"].startswith("flowchart")
-    assert dumped["bounded_contexts"][0]["aggregates"][0]["name"] == "PlanRequest"
+    assert dumped["future_diagram"]["mermaid"].startswith("flowchart")
+    bc = dumped["bounded_contexts"][0]
+    assert bc["aggregates"][0]["name"] == "PlanRequest"
+    assert bc["domain_services"] and bc["domain_events"]
     assert dumped["event_backbone"]["default_transport"] == "in_process"
+    assert dumped["internal_event_schema"]["event_version"]      # versioning rule
+    assert dumped["read_models"][0]["source_events"]             # read model → events
+    assert dumped["data_ownership"]                              # ownership rules
+    assert dumped["guardrails"][0]["enforcement"]                # enforcement mechanism
+    assert dumped["observability"]                               # obs requirements
+    vs = dumped["vertical_slice"]
+    assert vs["bounded_context"] and vs["domain_events"]
+    assert dumped["extraction_strategy"]["gated_on"] == "tested_slice"
+
+
+def test_planning_event_schema_round_trip():
+    # W5: SWE-AF's OWN planner observability event (distinct from the target
+    # project's internal_event_schema above — see W4 note in Behavior 8).
+    from swe_af.reasoners.schemas import PlanningEvent
+    ev = PlanningEvent(
+        event_name="PlanningArtifactsValidated", event_version="v1",
+        occurred_at="2026-06-23T00:00:00Z", source_context="DDD Planning",
+        correlation_id="plan-123", payload={"errors": 0},
+    )
+    assert ev.model_dump()["event_name"] == "PlanningArtifactsValidated"
 ```
 
 ### Green: Minimal Implementation
@@ -313,9 +406,21 @@ Add Pydantic models with default factories:
 - `ReadModelSpec`
 - `ArchitecturalGuardrail`
 - `ObservabilityRequirement`
-- `VerticalSlicePlan`
-- `ExtractionStrategy`
+- `VerticalSlicePlan` (fields incl. `bounded_context: str`, `domain_events: list[str]`)
+- `ExtractionStrategy` (field `gated_on: Literal["tested_slice"]` — W1)
 - `ArchitecturePlanningArtifacts`
+- `PlanningEvent` (W5 — SWE-AF's own planner observability event; fields
+  `event_name`, `event_version`, `occurred_at`, `source_context`,
+  `correlation_id`, `payload: dict`). This is NOT the target project's
+  `InternalEventSchemaSpec`; see the W4 note in Behavior 8.
+
+Concrete field names the validator reads (W1/W3 — keep schema and validator in
+lockstep): `EventBackbonePlan.default_transport` + `migration_justification`,
+`BoundedContextSpec.{aggregates,domain_services,domain_events}`,
+`InternalEventSchemaSpec.{event_name,event_version,metadata_fields,payload_fields}`,
+`DomainEventSpec.producer_context`, `ReadModelSpec.source_events`,
+`ArchitecturalGuardrail.enforcement`, `DataOwnershipRule`, `VerticalSlicePlan.{bounded_context,domain_events}`,
+`ExtractionStrategy.gated_on`.
 
 Extend:
 
@@ -372,14 +477,27 @@ missing read models, or missing observability.
 from swe_af.reasoners.pipeline import validate_planning_artifacts
 
 
-def test_validator_accepts_complete_artifacts(complete_artifacts):
-    assert validate_planning_artifacts(complete_artifacts) == []
+def test_validator_accepts_complete_artifacts(complete_planning_artifacts):
+    assert validate_planning_artifacts(complete_planning_artifacts) == []
 
 
-def test_validator_rejects_context_without_domain_events(complete_artifacts):
-    complete_artifacts.bounded_contexts[0].domain_events = []
-    errors = validate_planning_artifacts(complete_artifacts)
+def test_validator_rejects_context_without_domain_events(complete_planning_artifacts):
+    complete_planning_artifacts.bounded_contexts[0].domain_events = []
+    errors = validate_planning_artifacts(complete_planning_artifacts)
     assert any("domain event" in error.lower() for error in errors)
+
+
+def test_validator_requires_migration_justification_for_non_in_process(complete_planning_artifacts):
+    complete_planning_artifacts.event_backbone.default_transport = "kafka"
+    complete_planning_artifacts.event_backbone.migration_justification = ""
+    errors = validate_planning_artifacts(complete_planning_artifacts)
+    assert any("migration_justification" in e for e in errors)
+
+
+def test_validator_accepts_dict_input(complete_planning_artifacts):
+    # M3: plan() passes a dict (app.call returns model_dump()), so the production
+    # path is dict-shaped. Validate it directly, not just the model.
+    assert validate_planning_artifacts(complete_planning_artifacts.model_dump()) == []
 ```
 
 ### Green: Minimal Implementation
@@ -399,17 +517,19 @@ Required checks:
 - future diagram exists and contains Mermaid source.
 - at least one bounded context.
 - every bounded context has aggregates, services, and domain events.
-- event backbone default transport is `in_process` unless a more complex transport
-  is justified.
-- internal event schema has event name, versioning rule, metadata fields, and payload
-  fields.
-- every domain event has a producer context.
+- event backbone `default_transport` is `in_process`; if it is anything else, a
+  non-empty `migration_justification` string is REQUIRED (W1 — deterministic, no
+  prose judgement).
+- internal event schema has event name, versioning rule (`event_version`),
+  metadata fields, and payload fields.
+- every domain event has a non-empty `producer_context`.
 - data ownership rules exist and every bounded context owns or reads data explicitly.
-- read models exist and reference source events.
-- guardrails exist and include an enforcement mechanism.
-- observability requirements exist.
-- vertical slice references a bounded context and at least one domain event.
-- extraction strategy exists and is gated on a tested functional slice.
+- read models exist and each references at least one `source_events` entry.
+- guardrails exist and each has a non-empty `enforcement` field.
+- observability requirements exist (non-empty).
+- vertical slice references a `bounded_context` and at least one `domain_events` entry.
+- extraction strategy exists and `gated_on == "tested_slice"` (W1 — a checkable
+  enum field, not a prose claim).
 
 ### Refactor
 
@@ -526,6 +646,12 @@ async def run_architecture_planning_loop(..., validation_feedback: list[str] | N
 **Then**: `plan()` calls `run_architecture_planning_loop` again with feedback before
 Sprint Planner runs.
 
+**Given**: Validation still fails after `max_planning_loop_iterations` attempts.
+**When**: the loop is exhausted.
+**Then**: `plan()` does NOT raise — it force-accepts the best artifacts, emits a
+warning note with the residual validator feedback, and proceeds to Sprint Planner
+(C3 — mirrors the Tech Lead force-approve at `app.py:1669-1678`).
+
 ### Red: Write Failing Tests
 
 **File**: `tests/test_planner_pipeline.py`
@@ -550,47 +676,95 @@ async def test_plan_retries_planning_loop_with_validation_feedback(mock_agent_ai
     loop_calls = [c for c in mock_agent_ai.call_args_list if "run_architecture_planning_loop" in c.args[0]]
     assert len(loop_calls) == 2
     assert loop_calls[1].kwargs["validation_feedback"]
+
+
+@pytest.mark.asyncio
+async def test_plan_force_accepts_after_exhausting_planning_loop(mock_agent_ai, tmp_path):
+    # C3: exhausting retries must NOT raise — proceed to Sprint Planner with the
+    # best artifacts (like the Tech Lead force-approve). Both loop results invalid.
+    mock_agent_ai.side_effect = [prd, arch, review, invalid_artifacts, invalid_artifacts, sprint, issue_writer]
+    result = await _call_plan(str(tmp_path), max_planning_loop_iterations=2)  # no raise
+    targets = [c.args[0] for c in mock_agent_ai.call_args_list]
+    assert "swe-planner.run_sprint_planner" in targets  # reached sprint planner anyway
+    assert "planning_artifacts" in result
 ```
+
+**Update existing tests (C2 — REQUIRED, not optional).** Inserting the planning
+loop adds one sub-call between Tech Lead and Sprint Planner, so every existing
+`side_effect`/`call_count` is off by one. Update these (insert the planning-loop
+mock right after the last `review`/`rejected`, before `sprint`):
+
+- `tests/test_planner_pipeline.py`:
+  - `test_plan_happy_path` (side_effect @177): 5 → 6.
+  - `test_plan_pm_parsed_none` (@212): 5 → 6.
+  - `test_plan_tech_lead_rejects_with_max_iterations_one` (@246): 7 → 8
+    (planning-loop mock after the 2nd `rejected`).
+  - `test_plan_returns_dict_with_levels` (@316): 6 → 7.
+- `tests/test_mock_fixture_cross_feature_integration.py`:
+  - `test_mock_agent_ai_intercepts_node_id_prefixed_calls` (@146): 5 → 6, and the
+    `call_count == 5` assert (@151) → 6.
+  - `test_plain_dict_mock_bypasses_envelope_unwrapping` (@186): 5 → 6.
+  - `test_plan_output_is_valid_execute_input` (@231): 6 → 7.
 
 ### Green: Minimal Implementation
 
 **File**: `swe_af/app.py`
 
-Add `plan()` parameters:
+Add `plan()` parameters (W6 — defaults-only for this slice; threading these
+through `BuildConfig`/`ExecutionConfig` for production tuning is explicitly out of
+scope here, and `BuildConfig`/`ExecutionConfig` use `extra="forbid"` so that
+plumbing must be done deliberately later, not silently):
 
 - `planning_loop_model: str = "sonnet"`
 - `max_planning_loop_iterations: int = 2`
 
-Insert after Tech Lead approval and before Sprint Planner:
+Insert at `app.py:1680` (after Tech Lead approval, before the Phase-4 Sprint
+Planner `app.note`). Do the extraction NOW (M2 — `plan()` is already ~190 lines):
 
 ```python
-planning_artifacts = None
-validation_feedback = []
-for i in range(max_planning_loop_iterations):
-    planning_artifacts = _unwrap(await app.call(
-        f"{NODE_ID}.run_architecture_planning_loop",
-        prd=prd,
-        architecture=arch,
-        repo_path=repo_path,
-        artifacts_dir=artifacts_dir,
-        validation_feedback=validation_feedback,
-        model=planning_loop_model,
-        ...
-    ), "run_architecture_planning_loop")
-    validation_feedback = validate_planning_artifacts(planning_artifacts)
-    if not validation_feedback:
-        break
-else:
-    raise RuntimeError(...)
+# helper (module level), keeps plan() readable
+async def _run_architecture_planning_loop_until_valid(*, prd, architecture, repo_path,
+        artifacts_dir, model, max_iterations, **kw) -> dict:
+    planning_artifacts, feedback = None, []
+    for i in range(max_iterations):
+        planning_artifacts = _unwrap(await app.call(
+            f"{NODE_ID}.run_architecture_planning_loop",
+            prd=prd, architecture=architecture, repo_path=repo_path,
+            artifacts_dir=artifacts_dir, validation_feedback=feedback,
+            model=model, **kw,
+        ), "run_architecture_planning_loop")
+        feedback = validate_planning_artifacts(planning_artifacts)
+        if not feedback:
+            app.note("Planning loop validated", tags=["pipeline", "planning_loop", "ok"])
+            return planning_artifacts
+        app.note(f"Planning loop validation failed (attempt {i+1})",
+                 tags=["pipeline", "planning_loop", "retry"])
+    # C3: exhausted — force-accept the best artifacts, warn, and proceed
+    # (mirrors the Tech Lead force-approve at app.py:1669-1678). Do NOT raise.
+    app.note(f"Planning loop accepted with {len(feedback)} unresolved warnings: {feedback}",
+             tags=["pipeline", "planning_loop", "accepted_with_warnings"])
+    return planning_artifacts
 ```
 
-Pass `planning_artifacts` to `run_sprint_planner` and include it in `PlanResult`.
+In `plan()` at the insertion point:
+
+```python
+planning_artifacts = await _run_architecture_planning_loop_until_valid(
+    prd=prd, architecture=arch, repo_path=repo_path, artifacts_dir=artifacts_dir,
+    model=planning_loop_model, max_iterations=max_planning_loop_iterations,
+    permission_mode=permission_mode, ai_provider=ai_provider,
+    workspace_manifest=workspace_manifest,
+)
+```
+
+Pass `planning_artifacts` to `run_sprint_planner` and include it in `PlanResult`
+(`PlanResult.planning_artifacts`, added in Behavior 1).
 
 ### Refactor
 
-- Extract `_run_architecture_planning_loop_until_valid(...)` if `plan()` gets too
-  large.
-- Keep error message short and include validator feedback.
+- The until-valid helper is already extracted above; keep it module-level and
+  independently unit-testable.
+- Warning notes (not exceptions) carry the residual validator feedback.
 
 ### Success Criteria
 
@@ -627,8 +801,8 @@ def test_sprint_planner_prompt_accepts_planning_artifacts():
     assert "planning_artifacts" in sig.parameters
 
 
-def test_sprint_planner_prompt_requires_vertical_slice_and_context_fields(artifacts):
-    prompt = sprint_planner_task_prompt(goal="g", prd={}, architecture={}, planning_artifacts=artifacts)
+def test_sprint_planner_prompt_requires_vertical_slice_and_context_fields(complete_planning_artifacts):
+    prompt = sprint_planner_task_prompt(goal="g", prd={}, architecture={}, planning_artifacts=complete_planning_artifacts)
     assert "bounded_context" in prompt
     assert "contract_refs" in prompt
     assert "slice_role" in prompt
@@ -652,6 +826,12 @@ Changes:
 - Require at least one issue with `slice_role="vertical-slice"` that proves one
   aggregate/service/event/read-model path end-to-end.
 - Require instrumentation/observability tasks early, not as final cleanup.
+- **Deterministic guard (M1)**: the vertical-slice guarantee must not be
+  prompt-only. After Sprint Planner returns (when `planning_artifacts` was
+  supplied), assert at least one returned issue carries
+  `slice_role == "vertical-slice"`; if none does, treat it like a validator miss —
+  emit a warning note (consistent with the C3 degrade-don't-abort contract). Add a
+  unit test for this post-sprint check.
 
 ### Refactor
 
@@ -791,7 +971,14 @@ internal event schema.
 
 ```python
 def test_planning_loop_records_events(tmp_path):
-    publish_planning_event(...)
+    from swe_af.reasoners.schemas import PlanningEvent
+    ev = PlanningEvent(
+        event_name="PlanningArtifactsValidated", event_version="v1",
+        occurred_at="2026-06-23T00:00:00Z", source_context="DDD Planning",
+        correlation_id="plan-123", payload={"errors": 0},
+    )
+    publish_planning_event(artifacts_dir=str(tmp_path / ".artifacts"), event=ev,
+                           now="2026-06-23T00:00:00Z")
     content = (tmp_path / ".artifacts" / "plan" / "planning-events.jsonl").read_text()
     assert "PlanningArtifactsValidated" in content
 ```
@@ -803,22 +990,31 @@ def test_planning_loop_records_events(tmp_path):
 - `swe_af/reasoners/pipeline.py`
 - `swe_af/app.py`
 
-Add a small in-process event helper:
+> **W4 — two distinct "event" concepts, do not cross-wire them:**
+> 1. `planning_artifacts.internal_event_schema` (Behaviors 1–3) describes the
+>    **target project's** designed domain events — a *planning output*. It is
+>    validated by `validate_planning_artifacts`.
+> 2. `PlanningEvent` here is **SWE-AF's own** planner-observability event stream
+>    (`PlanRequested`, `ArchitectureApproved`, `PlanningArtifactsValidated`, … from
+>    the "Future Bounded Contexts for the Planner" table). It is NOT validated by
+>    `validate_planning_artifacts` and must NOT reuse `InternalEventSchemaSpec`.
+
+Add a small in-process event helper using the typed `PlanningEvent` model (defined
+in Behavior 1). Inject the timestamp so the test is deterministic (W5):
 
 ```python
-def publish_planning_event(*, artifacts_dir: str, event: PlanningEvent) -> None:
+def publish_planning_event(
+    *, artifacts_dir: str, event: PlanningEvent, now: str | None = None,
+) -> None:
+    # now defaults to an injected clock value in tests; never call a wall clock
+    # implicitly in a way the test can't control.
     ...
 ```
 
-The first implementation writes JSONL under `.artifacts/plan/planning-events.jsonl`.
-No external broker is introduced. The event schema is stable and includes:
-
-- `event_name`
-- `event_version`
-- `occurred_at`
-- `source_context`
-- `correlation_id`
-- `payload`
+The first implementation appends JSONL under
+`.artifacts/plan/planning-events.jsonl`. No external broker is introduced. The
+`PlanningEvent` schema is stable: `event_name`, `event_version`, `occurred_at`,
+`source_context`, `correlation_id`, `payload`.
 
 ### Refactor
 
@@ -920,11 +1116,14 @@ make check
 
 ## Implementation Order
 
-1. Schema foundation and backward-compatibility tests.
-2. Deterministic planning-artifact validator.
+0. Define the shared `complete_planning_artifacts` conftest fixture (W2).
+1. Schema foundation (incl. `PlanningEvent`) and backward-compatibility tests.
+2. Deterministic planning-artifact validator (concrete field checks; dict + model).
 3. Architect planning-loop prompt and reasoner.
-4. `plan()` orchestration and retry behavior.
-5. Sprint Planner prompt/schema threading.
+4. `plan()` orchestration + retry + force-accept (C3) — **and update the 7 existing
+   planner tests' `side_effect`/`call_count` (C2)** in the same step so the suite
+   stays green.
+5. Sprint Planner prompt/schema threading (+ deterministic vertical-slice guard, M1).
 6. Issue Writer prompt rendering.
 7. Execution/replanner context preservation.
 8. Planning events and observability.
@@ -933,20 +1132,24 @@ make check
 
 ## References
 
+- Review report:
+  `thoughts/searchable/shared/plans/2026-06-23-07-38-SWE-AF-tdd-ddd-modular-planning-loop-REVIEW.md`
 - Research:
   `thoughts/searchable/shared/research/2026-06-23-06-45-architect-planning-agent-contracts.md`
-- Main planner:
-  `swe_af/app.py:1547`
-- Planning reasoners:
-  `swe_af/reasoners/pipeline.py:158`
+- Main planner `plan()`:
+  `swe_af/app.py:1570` (insertion point `:1680`, Tech Lead force-approve `:1669-1678`, sprint call `:1682`)
+- Planning reasoners (`run_sprint_planner`):
+  `swe_af/reasoners/pipeline.py:478` (pure helpers `:52,:93,:134`)
 - Planning schemas:
-  `swe_af/reasoners/schemas.py:10`
+  `swe_af/reasoners/schemas.py` (`Architecture` :62, `PlannedIssue` :122, `PlanResult` :141)
 - Architect prompt:
-  `swe_af/prompts/architect.py:9`
+  `swe_af/prompts/architect.py`
 - Sprint Planner prompt:
-  `swe_af/prompts/sprint_planner.py:9`
+  `swe_af/prompts/sprint_planner.py:337` (keyword-only)
 - Issue Writer prompt:
-  `swe_af/prompts/issue_writer.py:8`
+  `swe_af/prompts/issue_writer.py:110`
+- Execution handoff:
+  `swe_af/execution/dag_executor.py:744` (`_init_dag_state`), `swe_af/execution/schemas.py:276` (`DAGState`), `swe_af/prompts/replanner.py:103`
 - Existing planner tests:
   `tests/test_planner_pipeline.py`
 - Existing plan-to-execute contract tests:
