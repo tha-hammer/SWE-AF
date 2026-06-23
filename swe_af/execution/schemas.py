@@ -707,6 +707,13 @@ class BuildConfig(BaseModel):
     # Between-cycles wall-clock budget for the verify/fix loop. Evaluated before
     # launching a fix DAG (never interrupts an in-flight one); 0 disables.
     verify_fix_soft_deadline_seconds: int = 3600
+    # Overall build wall-clock budget. The build finalizes with the completed work
+    # (returns completed/completed_with_debt) once this is reached, instead of being
+    # cancelled mid-phase by the agentfield runtime watchdog and reported "failed".
+    # 0 = auto-derive from the runtime watchdog (default_execution_timeout) minus
+    # build_budget_buffer_seconds, so the build always finalizes BEFORE the watchdog.
+    build_budget_seconds: int = 0
+    build_budget_buffer_seconds: int = 1800  # finalize this far before the watchdog
     git_init_max_retries: int = 3  # Number of retry attempts for git_init
     git_init_retry_delay: float = 1.0  # Seconds to wait between retries
     max_integration_test_retries: int = 1

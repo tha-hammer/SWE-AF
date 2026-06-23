@@ -610,6 +610,38 @@ def _build_summary(
     return summary
 
 
+# agentfield's runtime watchdog default (async_config.default_execution_timeout).
+# The build derives its own budget below this so it finalizes the completed work
+# BEFORE the watchdog can cancel the reasoner and report a green build as "failed".
+_AGENTFIELD_DEFAULT_WATCHDOG_SECONDS = 7200.0
+
+
+def _effective_build_budget_seconds(cfg: "BuildConfig") -> float:
+    """The wall-clock budget after which build() finalizes with completed work.
+
+    Explicit ``cfg.build_budget_seconds`` wins; otherwise derive from the
+    agentfield runtime watchdog (``default_execution_timeout`` env) minus
+    ``cfg.build_budget_buffer_seconds`` so the build always finalizes first.
+    """
+    if cfg.build_budget_seconds and cfg.build_budget_seconds > 0:
+        return float(cfg.build_budget_seconds)
+    raw = os.getenv("default_execution_timeout", "") or os.getenv(
+        "DEFAULT_EXECUTION_TIMEOUT", ""
+    )
+    try:
+        watchdog = float(raw) if raw else _AGENTFIELD_DEFAULT_WATCHDOG_SECONDS
+    except ValueError:
+        watchdog = _AGENTFIELD_DEFAULT_WATCHDOG_SECONDS
+    return max(60.0, watchdog - float(cfg.build_budget_buffer_seconds))
+
+
+def _build_budget_exhausted(start_monotonic: float, budget_seconds: float) -> bool:
+    """True once the build has consumed its wall-clock budget."""
+    if budget_seconds <= 0:
+        return False
+    return (time.monotonic() - start_monotonic) >= budget_seconds
+
+
 @app.reasoner()
 async def build(
     goal: str,
@@ -659,6 +691,16 @@ async def build(
         raise ValueError("Either repo_path or repo_url must be provided")
 
     app.note(f"Build starting (build_id={build_id})", tags=["build", "start"])
+
+    # Overall build wall-clock budget. Once reached, the verify/fix loop stops
+    # launching new work and the build finalizes with the completed work, so a
+    # green build is never turned into "failed" by the agentfield runtime watchdog.
+    _build_start = time.monotonic()
+    _build_budget = _effective_build_budget_seconds(cfg)
+    app.note(
+        f"Build budget: {_build_budget:.0f}s (finalize before runtime watchdog)",
+        tags=["build", "budget"],
+    )
 
     # Scope key for the in-memory credentials store negotiated by the
     # environment scout. Shared by every reasoner in this build (run_id
@@ -1113,6 +1155,25 @@ async def build(
         prior_failed_criteria: list[dict] = []   # cross-cycle history (deduped)
         seen_prior_criteria: set[str] = set()
         for cycle in range(cfg.max_verify_fix_cycles + 1):
+            # Overall build budget gate: never START a verification/fix cycle once
+            # the budget is reached — finalize with the completed work instead of
+            # being cancelled mid-verifier by the runtime watchdog (which would
+            # report a green build as "failed"). The completed issues are already
+            # merged + checkpointed; we record the deferred verification as debt so
+            # the terminal status is completed_with_debt, not failed.
+            if _build_budget_exhausted(_build_start, _build_budget):
+                app.note(
+                    "Build budget reached — finalizing with completed work; "
+                    f"verification deferred (cycle {cycle})",
+                    tags=["build", "verify", "budget", "finalized"],
+                )
+                dag_result.setdefault("accumulated_debt", []).append({
+                    "type": "verification_incomplete",
+                    "criterion": "full acceptance verification",
+                    "reason": "build time budget reached before verification completed",
+                    "severity": "medium",
+                })
+                break
             app.note(f"Verification cycle {cycle}", tags=["build", "verify"])
             verification = _unwrap(await app.call(
                 f"{NODE_ID}.run_verifier",
@@ -1565,6 +1626,26 @@ async def build(
             pr_results=pr_results,
             ci_gate_results=ci_gate_results,
         ).model_dump()
+
+    except asyncio.CancelledError:
+        # The agentfield runtime watchdog (or a shutdown) cancelled the build
+        # mid-phase. Persist the latest completed work so it is not lost and
+        # resume_build can continue, then propagate. The budget gate above is the
+        # primary defense — this is the backstop if the budget was set too high.
+        _locals = locals()
+        try:
+            _dump_main_dag_result(
+                (_locals.get("plan_result") or {}).get("artifacts_dir", artifacts_dir),
+                _locals.get("dag_result") or {},
+            )
+        except Exception:
+            pass
+        app.note(
+            "Build cancelled by runtime watchdog — completed work persisted to "
+            "checkpoint/dag-result (resume_build can continue)",
+            tags=["build", "cancelled", "finalized"],
+        )
+        raise
 
     finally:
         if _scope_id:
