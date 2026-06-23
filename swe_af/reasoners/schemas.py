@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from swe_af.hitl.ask_user import AskUserForm
 
@@ -59,6 +59,179 @@ class ArchitectureDecision(BaseModel):
     rationale: str
 
 
+# ---------------------------------------------------------------------------
+# DDD modular planning artifacts (Architect-owned planning loop)
+#
+# These describe the DDD design of the TARGET project the agents are building.
+# They are implementation-neutral: the names are domain vocabulary, not a
+# commitment to Kafka/event-sourcing. The deterministic validator
+# (validate_planning_artifacts) reads the field names defined here, so the schema
+# is the single source of truth for that contract.
+# ---------------------------------------------------------------------------
+
+
+class ArchitectureDiagram(BaseModel):
+    """A Mermaid software diagram (current or future state)."""
+
+    title: str = ""
+    mermaid: str  # Mermaid source, e.g. "flowchart TB ..."
+
+
+class AggregateSpec(BaseModel):
+    """An aggregate root within a bounded context."""
+
+    name: str
+    responsibility: str = ""
+    invariants: list[str] = Field(default_factory=list)
+
+
+class DomainServiceSpec(BaseModel):
+    """A domain service within a bounded context."""
+
+    name: str
+    responsibility: str = ""
+
+
+class DomainEventSpec(BaseModel):
+    """A domain event emitted within a bounded context."""
+
+    name: str
+    producer_context: str  # which bounded context produces it
+    payload_summary: str = ""
+
+
+class BoundedContextSpec(BaseModel):
+    """A bounded context: aggregates, services, and the events it produces."""
+
+    name: str
+    purpose: str = ""
+    aggregates: list[AggregateSpec] = Field(default_factory=list)
+    domain_services: list[DomainServiceSpec] = Field(default_factory=list)
+    domain_events: list[DomainEventSpec] = Field(default_factory=list)
+
+
+class ModuleContractSpec(BaseModel):
+    """A code-level module contract between bounded contexts."""
+
+    module: str
+    provides: list[str] = Field(default_factory=list)
+    consumes: list[str] = Field(default_factory=list)
+    notes: str = ""
+
+
+class InternalEventField(BaseModel):
+    """A single field in the internal event schema."""
+
+    name: str
+    type: str = "string"
+
+
+class InternalEventSchemaSpec(BaseModel):
+    """The versioned envelope schema for the target project's internal events.
+
+    This is the DESIGNED schema of the target system's events — distinct from
+    ``PlanningEvent`` (SWE-AF's own planner-observability stream).
+    """
+
+    event_name: str
+    event_version: str  # versioning rule, e.g. "v1" / semver
+    metadata_fields: list[InternalEventField] = Field(default_factory=list)
+    payload_fields: list[InternalEventField] = Field(default_factory=list)
+
+
+class DataOwnershipRule(BaseModel):
+    """Which bounded context owns/reads which data."""
+
+    bounded_context: str
+    owns: list[str] = Field(default_factory=list)
+    reads: list[str] = Field(default_factory=list)
+
+
+class EventBusPlan(BaseModel):
+    """Implementation guidance for the internal event bus."""
+
+    description: str = ""
+    migration_notes: str = ""  # how to move to queue/pub-sub/Kafka later
+
+
+class EventBackbonePlan(BaseModel):
+    """The internal event backbone: default transport + migration justification."""
+
+    default_transport: str = "in_process"  # default: simple hand-rolled in-process bus
+    migration_justification: str = ""  # REQUIRED by the validator if not in_process
+    bus: EventBusPlan = Field(default_factory=EventBusPlan)
+
+
+class ReadModelSpec(BaseModel):
+    """A CQRS-lite read model derived from one or more domain events."""
+
+    name: str
+    source_events: list[str] = Field(default_factory=list)
+    purpose: str = ""
+
+
+class ArchitecturalGuardrail(BaseModel):
+    """An architectural guardrail and how it is enforced."""
+
+    rule: str
+    enforcement: str  # the enforcement mechanism (review, lint, test, structure)
+
+
+class ObservabilityRequirement(BaseModel):
+    """A first-class observability/instrumentation requirement."""
+
+    name: str
+    detail: str = ""
+
+
+class VerticalSlicePlan(BaseModel):
+    """The one end-to-end vertical slice proving a context path works."""
+
+    bounded_context: str
+    domain_events: list[str] = Field(default_factory=list)
+    description: str = ""
+
+
+class ExtractionStrategy(BaseModel):
+    """When/how to extract a context after the slice is tested and functional."""
+
+    gated_on: Literal["tested_slice"] = "tested_slice"
+    description: str = ""
+
+
+class ArchitecturePlanningArtifacts(BaseModel):
+    """The typed DDD modular-planning artifact the Architect produces."""
+
+    current_diagram: ArchitectureDiagram
+    future_diagram: ArchitectureDiagram
+    bounded_contexts: list[BoundedContextSpec] = Field(default_factory=list)
+    module_contracts: list[ModuleContractSpec] = Field(default_factory=list)
+    internal_event_schema: InternalEventSchemaSpec
+    data_ownership: list[DataOwnershipRule] = Field(default_factory=list)
+    event_backbone: EventBackbonePlan = Field(default_factory=EventBackbonePlan)
+    read_models: list[ReadModelSpec] = Field(default_factory=list)
+    guardrails: list[ArchitecturalGuardrail] = Field(default_factory=list)
+    observability: list[ObservabilityRequirement] = Field(default_factory=list)
+    vertical_slice: VerticalSlicePlan
+    extraction_strategy: ExtractionStrategy = Field(default_factory=ExtractionStrategy)
+
+
+class PlanningEvent(BaseModel):
+    """SWE-AF's OWN planner-observability event (the internal planning stream).
+
+    Distinct from ``InternalEventSchemaSpec`` (the target project's designed
+    events). Appended to ``.artifacts/plan/planning-events.jsonl`` — see
+    ``publish_planning_event``.
+    """
+
+    event_name: str
+    event_version: str = "v1"
+    occurred_at: str = ""  # ISO timestamp; injected by the caller's clock
+    source_context: str = ""
+    correlation_id: str = ""
+    payload: dict = Field(default_factory=dict)
+
+
 class Architecture(BaseModel):
     """Architecture document produced by the architect."""
 
@@ -67,6 +240,7 @@ class Architecture(BaseModel):
     interfaces: list[str]
     decisions: list[ArchitectureDecision]
     file_changes_overview: str
+    planning_artifacts: ArchitecturePlanningArtifacts | None = None
 
 
 class ReviewResult(BaseModel):
@@ -136,6 +310,14 @@ class PlannedIssue(BaseModel):
     guidance: IssueGuidance | None = None  # Per-issue guidance from sprint planner
     verification: list[AcceptanceCheck] = []  # Runnable checks for the deterministic rung
     target_repo: str = ""  # Target repository for multi-repo builds (empty = default/only repo)
+    # DDD planning context (additive; populated when planning_artifacts drive the sprint)
+    bounded_context: str = ""  # Which bounded context this issue belongs to
+    contract_refs: list[str] = Field(default_factory=list)  # Module-contract references
+    domain_events: list[str] = Field(default_factory=list)  # Domain events touched
+    read_models: list[str] = Field(default_factory=list)  # CQRS-lite read models touched
+    guardrails: list[str] = Field(default_factory=list)  # Architectural guardrails to honor
+    observability: list[str] = Field(default_factory=list)  # Instrumentation to add
+    slice_role: str = ""  # "vertical-slice" marks the end-to-end proving slice
 
 
 class PlanResult(BaseModel):
@@ -149,3 +331,4 @@ class PlanResult(BaseModel):
     file_conflicts: list[dict] = []  # Informational only — merger agent handles resolution
     artifacts_dir: str
     rationale: str
+    planning_artifacts: ArchitecturePlanningArtifacts | None = None  # DDD planning loop output

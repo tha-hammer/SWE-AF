@@ -154,3 +154,90 @@ def mock_agent_ai(request: pytest.FixtureRequest):  # noqa: ARG001
 
     with patch("swe_af.app.app.call", mock_call):
         yield mock_call
+
+
+# ---------------------------------------------------------------------------
+# DDD planning-artifact fixtures (W2 — single source of truth for a valid artifact)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def complete_planning_artifacts():
+    """A fully populated, validator-passing ``ArchitecturePlanningArtifacts``.
+
+    Reused by the schema round-trip, validator, prompt, and retry tests so the
+    schema/validator/prompt contract cannot drift across test files.
+    """
+    from swe_af.reasoners.schemas import (
+        AggregateSpec,
+        ArchitectureDiagram,
+        ArchitecturePlanningArtifacts,
+        ArchitecturalGuardrail,
+        BoundedContextSpec,
+        DataOwnershipRule,
+        DomainEventSpec,
+        DomainServiceSpec,
+        EventBackbonePlan,
+        ExtractionStrategy,
+        InternalEventField,
+        InternalEventSchemaSpec,
+        ModuleContractSpec,
+        ObservabilityRequirement,
+        ReadModelSpec,
+        VerticalSlicePlan,
+    )
+
+    return ArchitecturePlanningArtifacts(
+        current_diagram=ArchitectureDiagram(title="Current", mermaid="flowchart LR\n  A --> B"),
+        future_diagram=ArchitectureDiagram(title="Future", mermaid="flowchart TB\n  A --> B"),
+        bounded_contexts=[
+            BoundedContextSpec(
+                name="Plan Intake",
+                purpose="Scope the plan request",
+                aggregates=[AggregateSpec(name="PlanRequest", responsibility="Hold the request")],
+                domain_services=[DomainServiceSpec(name="PRDScopingService", responsibility="Scope")],
+                domain_events=[
+                    DomainEventSpec(name="PlanRequested", producer_context="Plan Intake"),
+                ],
+            ),
+        ],
+        module_contracts=[ModuleContractSpec(module="plan_intake", provides=["PlanRequest.submit"])],
+        internal_event_schema=InternalEventSchemaSpec(
+            event_name="PlanRequested",
+            event_version="v1",
+            metadata_fields=[InternalEventField(name="correlation_id")],
+            payload_fields=[InternalEventField(name="goal")],
+        ),
+        data_ownership=[DataOwnershipRule(bounded_context="Plan Intake", owns=["plan_requests"])],
+        event_backbone=EventBackbonePlan(default_transport="in_process"),
+        read_models=[ReadModelSpec(name="PlanStatusView", source_events=["PlanRequested"])],
+        guardrails=[ArchitecturalGuardrail(rule="no cross-context imports", enforcement="review")],
+        observability=[ObservabilityRequirement(name="emit PlanRequested", detail="on submit")],
+        vertical_slice=VerticalSlicePlan(bounded_context="Plan Intake", domain_events=["PlanRequested"]),
+        extraction_strategy=ExtractionStrategy(gated_on="tested_slice"),
+    )
+
+
+@pytest.fixture
+def complete_planning_artifacts_dict(complete_planning_artifacts):
+    """The model_dump() of the valid artifact — the production (dict) shape."""
+    return complete_planning_artifacts.model_dump()
+
+
+@pytest.fixture
+def enriched_issue():
+    """A ``PlannedIssue`` carrying DDD bounded-context metadata (for prompt tests)."""
+    from swe_af.reasoners.schemas import PlannedIssue
+
+    return PlannedIssue(
+        name="plan-intake-submit",
+        title="Implement PlanRequest.submit",
+        description="Wire the Plan Intake submit path end to end.",
+        acceptance_criteria=["submit emits PlanRequested"],
+        bounded_context="Plan Intake",
+        contract_refs=["PlanRequest.submit"],
+        domain_events=["PlanRequested"],
+        read_models=["PlanStatusView"],
+        guardrails=["no cross-context imports"],
+        observability=["emit PlanRequested"],
+        slice_role="vertical-slice",
+    )
