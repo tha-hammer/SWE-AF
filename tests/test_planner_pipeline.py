@@ -418,6 +418,63 @@ async def test_plan_runs_architecture_planning_loop_before_sprint_planner(mock_a
 
 
 @pytest.mark.asyncio
+async def test_build_passes_resolved_codex_model_to_planning_loop(monkeypatch, tmp_path):
+    import swe_af.app as app_module
+
+    for env_var in ("SWE_DEFAULT_MODEL", "AI_MODEL", "HARNESS_MODEL"):
+        monkeypatch.delenv(env_var, raising=False)
+
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    plan_result = {
+        "prd": _make_prd_dict(),
+        "architecture": _make_architecture_dict(),
+        "review": _make_review_approved_dict(),
+        "issues": _make_sprint_result_dict()["issues"],
+        "levels": [["my-issue"]],
+        "file_conflicts": [],
+        "artifacts_dir": str(tmp_path / ".artifacts"),
+        "rationale": "ok",
+    }
+    dag_result = {
+        "completed_issues": [
+            {"issue_name": "my-issue", "outcome": "completed", "result_summary": "done"}
+        ],
+        "failed_issues": [],
+        "skipped_issues": [],
+        "all_issues": [{"name": "my-issue"}],
+        "accumulated_debt": [],
+    }
+
+    async def fake_call(target: str, **kwargs):
+        calls.append((target, kwargs))
+        if target.endswith(".plan"):
+            return plan_result
+        if target.endswith(".run_git_init"):
+            return {"success": False, "error_message": "skip git in test"}
+        if target.endswith(".execute"):
+            return dag_result
+        if target.endswith(".run_verifier"):
+            return {"passed": True, "summary": "ok"}
+        if target.endswith(".run_repo_finalize"):
+            return {"success": True, "summary": "ok"}
+        raise AssertionError(f"unexpected app.call target: {target}")
+
+    monkeypatch.setattr(app_module.app, "call", fake_call)
+
+    real_build = getattr(app_module.build, "_original_func", app_module.build)
+    await real_build(
+        goal="Build a test app",
+        repo_path=str(tmp_path),
+        config={"runtime": "codex", "enable_github_pr": False},
+    )
+
+    plan_kwargs = next(kwargs for target, kwargs in calls if target.endswith(".plan"))
+    assert plan_kwargs["ai_provider"] == "codex"
+    assert plan_kwargs["planning_loop_model"] == "gpt-5.3-codex"
+
+
+@pytest.mark.asyncio
 async def test_plan_retries_planning_loop_with_validation_feedback(mock_agent_ai, tmp_path):
     prd = _make_prd_dict()
     arch = _make_architecture_dict()

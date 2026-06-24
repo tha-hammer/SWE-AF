@@ -479,6 +479,7 @@ ROLE_TO_MODEL_FIELD: dict[str, str] = {
     "pm": "pm_model",
     "architect": "architect_model",
     "tech_lead": "tech_lead_model",
+    "planning_loop": "planning_loop_model",
     "sprint_planner": "sprint_planner_model",
     "coder": "coder_model",
     "qa": "qa_model",
@@ -503,7 +504,7 @@ _MODEL_FIELD_TO_ROLE: dict[str, str] = {
 _ALLOWED_MODEL_KEYS: set[str] = set(MODEL_ROLE_KEYS) | {"default"}
 
 _LEGACY_GROUP_EQUIVALENTS: dict[str, str] = {
-    "planning": "models.pm, models.architect, models.tech_lead, models.sprint_planner",
+    "planning": "models.pm, models.architect, models.tech_lead, models.planning_loop, models.sprint_planner",
     "coding": "models.coder, models.qa, models.code_reviewer",
     "orchestration": "models.replan, models.retry_advisor, models.issue_writer, models.issue_advisor, models.verifier, models.git, models.merger, models.integration_tester",
     "lightweight": "models.qa_synthesizer",
@@ -1100,6 +1101,10 @@ class ExecutionConfig(BaseModel):
     @property
     def tech_lead_model(self) -> str:
         return self._model_for("tech_lead_model")
+
+    @property
+    def planning_loop_model(self) -> str:
+        return self._model_for("planning_loop_model")
 
     @property
     def sprint_planner_model(self) -> str:

@@ -164,6 +164,14 @@ class TestCodexRuntimeConfig(unittest.TestCase):
         self.assertEqual(cfg.coder_model, "gpt-5.3-codex-spark")
         self.assertEqual(cfg.qa_model, "gpt-5.3-codex")
 
+    def test_planning_loop_role_resolves_for_codex(self) -> None:
+        cfg = ExecutionConfig(
+            runtime="codex",
+            models={"planning_loop": "gpt-5.5"},
+        )
+        self.assertEqual(cfg.planning_loop_model, "gpt-5.5")
+        self.assertEqual(cfg.sprint_planner_model, "gpt-5.3-codex")
+
 
 class TestDefaultModelFromEnv(unittest.TestCase):
     """`SWE_DEFAULT_MODEL` lets the deployer pin a single model id without

@@ -72,7 +72,7 @@ curl -s -X POST http://localhost:8080/api/v1/execute/async/swe-planner.build \
 ```
 
 **Model role keys** (in `config.models`; `"default"` overrides all):
-`pm, architect, tech_lead, sprint_planner, issue_writer, issue_advisor, coder, qa,
+`pm, architect, tech_lead, planning_loop, sprint_planner, issue_writer, issue_advisor, coder, qa,
 code_reviewer, qa_synthesizer, verifier, replan, retry_advisor, git, merger,
 integration_tester, ci_fixer` (`swe_af/execution/schemas.py:ROLE_TO_MODEL_FIELD`).
 
@@ -161,11 +161,11 @@ curl -s -X POST http://localhost:8080/api/v1/execute/async/swe-planner.resume_bu
   still overrides). Belt-and-suspenders: the compose codex node also sets
   `security_opt: [seccomp:unconfined]` so `unshare` works (`docker exec <node> bash -c
   'unshare --user echo ok'` must print `ok`).
-- **planning loop uses `sonnet` under codex → fails (known follow-up).** The architecture
-  planning loop runs `model=sonnet ai_provider=codex` (sonnet isn't in the configurable
-  role map and codex can't run a Claude model). PM/architect/tech_lead are fine on
-  `gpt-5.5`; the loop needs routing to claude_code (OAuth token is present in the codex
-  node) or a codex model. Tracked separately.
+- **planning loop model is configurable.** The architecture planning loop uses
+  `models.planning_loop` and defaults through the selected runtime like other roles.
+  For codex builds, set it to a codex model explicitly or let the codex runtime base
+  default apply; do not let a Claude-only model such as `sonnet` reach
+  `ai_provider=codex`.
 - **codex `~/.codex` mount flips `config.toml` to root-owned.** The codex node runs as
   root; sharing the host `~/.codex` means codex rewrites `config.toml` as `root:root`
   600, locking the user's interactive TUI (`Permission denied (os error 13)`). Solution

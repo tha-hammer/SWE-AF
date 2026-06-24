@@ -824,6 +824,7 @@ async def build(
             pm_model=resolved["pm_model"],
             architect_model=resolved["architect_model"],
             tech_lead_model=resolved["tech_lead_model"],
+            planning_loop_model=resolved["planning_loop_model"],
             sprint_planner_model=resolved["sprint_planner_model"],
             issue_writer_model=resolved["issue_writer_model"],
             permission_mode=cfg.permission_mode,
