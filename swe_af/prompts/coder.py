@@ -35,6 +35,19 @@ You work in an isolated git worktree:
      If the issue spec names specific test file paths, use those exact paths.
    - Name tests descriptively: `test_<module>_<behavior>` for functions.
    - Tests verify behavior, not implementation details.
+   - Tests must exercise REAL behavior. Good: stub only the external \
+     boundary (network, clock, randomness), call the real unit under test, \
+     and assert its real output. Bad: a test that passes only because a mock \
+     returns the asserted value (a circular mock), or because the unit under \
+     test is itself mocked out — that has verified nothing.
+   - A mock's contract must match the real dependency — same signature, same \
+     error/exception behavior. A mocked DB that never raises is not the DB; \
+     boundary-shaped bugs only surface against the real boundary.
+   - Assert the produced output or side effect, not merely that a mock was \
+     called. `expect(mock).toHaveBeenCalledWith(...)` on its own proves nothing.
+   - A `skipIf`/env-gated test that no-ops when its dependency (DB, API key) \
+     is absent is NOT coverage. If an acceptance criterion touches a real \
+     boundary, write an integration test that runs against it.
 4. **Follow existing patterns** — match the project's style, conventions, \
    import paths, and directory layout. Read nearby code before writing new code.
 5. **Clean commits** — your commit should look like a PR you'd be proud of. \

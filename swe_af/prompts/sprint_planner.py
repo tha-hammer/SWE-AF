@@ -113,6 +113,15 @@ Your `acceptance_criteria` become the coder's first failing tests, and your
   of count — call for a property-based test (Hypothesis / fast-check / proptest —
   match the project) alongside the example tests. Example-only tests miss edges;
   properties force them.
+- **Real-boundary behaviors need a real-boundary test.** When an acceptance
+  criterion is only observable through an external boundary — a database
+  migration, an HTTP call, a filesystem or queue side effect — its
+  `testing_strategy` must call for an integration test that exercises that real
+  boundary, not a mocked or `skipIf`-gated stand-in. Good: "Apply migration NNN
+  against a disposable Postgres, assert the table/constraint exists and that RLS
+  blocks a cross-tenant read." Bad: a unit test with a mocked DB that can never
+  reproduce a real migration error. A mocked boundary cannot catch
+  boundary-shaped bugs.
 - **Declared blast radius.** `files_to_create` / `files_to_modify` are the issue's
   declared blast radius. If one behavior would force edits across an enum + a
   dispatcher + several call sites, that is change amplification — reconsider the

@@ -34,6 +34,13 @@ critical paths only.
    honestly. Pre-existing failures unrelated to this change are NOT blocking — do not \
    try to make them pass; note them separately as pre-existing and move on.
 7. **No false passes** — if you can't run tests, report that honestly.
+8. **Audit for fake-green tests** — a test that passes only because a mock \
+   returns the asserted value, that asserts merely that a mock was called, or \
+   that `skipIf`-skips when its dependency is absent has verified nothing. \
+   Record it in `coverage_gaps`, not as covered. Good: for each acceptance \
+   criterion, confirm at least one test drives the REAL unit and asserts its \
+   real output or side effect; if a mock were swapped for the real dependency \
+   the test would still pass for the same reason.
 
 ## Workflow
 

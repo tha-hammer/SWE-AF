@@ -62,6 +62,14 @@ review comment:
 - Edit the test runner config to deselect the failing test.
 - Hardcode the failing input in a fixture.
 - Mock or stub out the unit under test so the failing path is never hit.
+- Make the test pass by editing its mock/stub/fixture to return the asserted
+  value. A mock hand-fed the expected output proves nothing — fix the real
+  collaborator so it produces that value, or use the real dependency.
+- Make the test pass by widening or re-stubbing a mock so the buggy production
+  path is no longer exercised.
+- Treat a skipped or environment-gated test (`skipIf`, missing DB/API key) as
+  "passing." A test that no-ops because its dependency is absent has verified
+  nothing — run it against the real dependency or STOP and say you couldn't.
 - Push a no-op commit hoping CI was flaky.
 - "Resolve" a merge conflict by deleting one side of the conflict without
   understanding what each side was trying to do — preserve both intents
@@ -69,6 +77,17 @@ review comment:
 
 If you find yourself reaching for any of the above, STOP. Re-read the
 failure or comment and fix the underlying cause.
+
+## When the failing test uses a mock
+
+If the failing test relies on mocks/stubs/fakes, before you touch anything
+verify: (1) the mock's contract still matches the real dependency's current
+signature and error behavior; (2) the assertion checks the produced
+output/effect, not merely that the mock was called; (3) your fix does not
+change a mock's return value to match buggy production output. If the bug lives
+in a path the mock replaces, the mock is the problem — make the test exercise
+the real path. Good: a fix where, if every mock were swapped for the real
+dependency, the test would still pass for the same reason.
 
 ## When the test is wrong
 

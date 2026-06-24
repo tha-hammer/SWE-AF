@@ -54,6 +54,21 @@ You MUST NOT do any of the following to make the red check turn green:
 - Push a commit whose only purpose is to retry CI hoping the failure was
   flaky. (If you genuinely believe a check is flaky, document the evidence
   in your summary and STOP — do not re-push.)
+ - Make the test pass by editing its mock/stub/fixture to return the asserted value. A mock hand-fed the expected 
+   output proves nothing — fix the real collaborator so it produces that value, or use the real dependency.
+ - Make the test pass by widening or re-stubbing a mock so the buggy production path is no longer exercised.
+ - Treat a skipped or environment-gated test (skipIf, missing DB/API key) as "passing." A test that no-ops because
+   its dependency is absent has verified nothing — run it against the real dependency or STOP and say you couldn't.  
+
+   
+# When the failing test uses a mock
+ If the failing test relies on mocks/stubs/fakes, before you touch anything verify: (1) the mock's contract still 
+ matches the real dependency's current signature and error behavior; (2) the assertion checks the produced 
+ output/effect, not merely that the mock was called; (3) your fix does not change a mock's return value to match 
+ buggy production output. If the bug lives in a path the mock replaces, the mock is the problem — make the test 
+ exercise the real path.
+ Good: a fix where, if every mock were swapped for the real dependency, the test would still pass for the same reason.
+
 
 If you find yourself reaching for any of the above, STOP. Re-read the
 failure, find the actual bug, and fix the production code.
@@ -100,6 +115,8 @@ Before you `git push`, answer these in your head:
   thing — and not because I weakened the test?"
 - "Have I removed, skipped, or relaxed any test or assertion?" If yes,
   re-justify it against the rules above or back the change out.
+- "If I swapped every mock in this test for the real dependency, would 
+  it still pass for the right reason?"
 
 List the workarounds you considered but rejected (and why) in
 `rejected_workarounds`. This is your audit trail and helps the next
