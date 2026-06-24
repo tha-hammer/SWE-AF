@@ -471,7 +471,7 @@ async def test_build_passes_resolved_codex_model_to_planning_loop(monkeypatch, t
 
     plan_kwargs = next(kwargs for target, kwargs in calls if target.endswith(".plan"))
     assert plan_kwargs["ai_provider"] == "codex"
-    assert plan_kwargs["planning_loop_model"] == "gpt-5.3-codex"
+    assert plan_kwargs["planning_loop_model"] == "gpt-5.5"
 
 
 @pytest.mark.asyncio

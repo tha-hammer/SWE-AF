@@ -527,6 +527,9 @@ _RUNTIME_BASE_MODELS: dict[str, dict[str, str]] = {
     },
     "codex": {
         **{field: "gpt-5.3-codex" for field in ALL_MODEL_FIELDS},
+        # Planning is the highest-leverage codex role — default it to the more
+        # powerful general model (gpt-5.5) rather than the codex-specialized one.
+        "planning_loop_model": "gpt-5.5",
     },
 }
 

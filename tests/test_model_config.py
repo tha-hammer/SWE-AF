@@ -142,13 +142,17 @@ class TestCodexRuntimeConfig(unittest.TestCase):
         self.assertEqual(cfg.ai_provider, "codex")
         resolved = cfg.resolved_models()
         for field in ALL_MODEL_FIELDS:
-            self.assertEqual(resolved[field], "gpt-5.3-codex")
+            # Planning defaults to the more powerful gpt-5.5; other roles use the
+            # codex-specialized default.
+            expected = "gpt-5.5" if field == "planning_loop_model" else "gpt-5.3-codex"
+            self.assertEqual(resolved[field], expected)
 
     def test_codex_execution_config_provider_and_defaults(self) -> None:
         cfg = ExecutionConfig(runtime="codex")
         self.assertEqual(cfg.ai_provider, "codex")
         self.assertEqual(cfg.coder_model, "gpt-5.3-codex")
         self.assertEqual(cfg.verifier_model, "gpt-5.3-codex")
+        self.assertEqual(cfg.planning_loop_model, "gpt-5.5")
 
     def test_env_codex_runtime_overrides_default(self) -> None:
         with mock.patch.dict(os.environ, {"SWE_DEFAULT_RUNTIME": "codex"}):
