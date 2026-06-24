@@ -2103,8 +2103,8 @@ async def resolve(
     # SWE-AF container. Match the existing run_github_pr / repo_finalize
     # convention (a bot identity).
     for key, value in (
-        ("user.email", os.getenv("SWE_AF_GIT_EMAIL", "swe-af@users.noreply.github.com")),
-        ("user.name", os.getenv("SWE_AF_GIT_NAME", "SWE-AF")),
+        ("user.email", os.getenv("SWE_AF_GIT_EMAIL", "silmari-agent@users.noreply.github.com")),
+        ("user.name", os.getenv("SWE_AF_GIT_NAME", "Silmari Agent - Created by Maceo")),
     ):
         subprocess.run(
             ["git", "config", key, value],
