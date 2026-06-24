@@ -54,6 +54,27 @@ def test_codex_strict_json_schema_recurses_into_defs() -> None:
     assert "default" not in item["properties"]["count"]
 
 
+def test_codex_strict_json_schema_coerces_typeless_union_branches() -> None:
+    """A Pydantic `Any | None` field renders the Any arm as a bare {}; OpenAI strict
+    structured outputs (codex --output-schema) reject any union branch without a type,
+    so the strict-ifier must give such arms a concrete type."""
+    schema = {
+        "type": "object",
+        "properties": {
+            # mirrors AskUserFormField.default_value: Any | None
+            "default_value": {"anyOf": [{}, {"type": "null"}]},
+        },
+    }
+
+    strict = _codex_strict_json_schema(schema)
+
+    branches = strict["properties"]["default_value"]["anyOf"]
+    # the bare {} (Any) arm must now carry a concrete type; the null arm is untouched
+    assert all("type" in branch for branch in branches)
+    assert {"type": "string"} in branches
+    assert {"type": "null"} in branches
+
+
 def test_codex_git_metadata_error_gets_actionable_hint() -> None:
     message = _augment_codex_error_message(
         "fatal: cannot create .git/index.lock",

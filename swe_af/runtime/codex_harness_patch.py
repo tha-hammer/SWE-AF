@@ -140,10 +140,26 @@ def _codex_strict_json_schema(schema: dict[str, Any]) -> dict[str, Any]:
     for key in ("allOf", "anyOf", "oneOf"):
         branch = strict.get(key)
         if isinstance(branch, list):
-            strict[key] = [
-                _codex_strict_json_schema(item) if isinstance(item, dict) else item
-                for item in branch
-            ]
+            coerced_branch: list[Any] = []
+            for item in branch:
+                if isinstance(item, dict):
+                    # OpenAI strict structured outputs (codex --output-schema) reject
+                    # union branches with no "type" — e.g. a Pydantic `Any` / `Any |
+                    # None` field renders the Any arm as a bare {}. Give such arms a
+                    # concrete scalar type so the schema validates; without this the
+                    # API returns invalid_json_schema (400) and the reasoner produces
+                    # no output. An explicit $ref / nested combinator / enum / const
+                    # arm is already typed, so leave those untouched.
+                    if (
+                        "type" not in item
+                        and "$ref" not in item
+                        and not (item.keys() & {"anyOf", "oneOf", "allOf", "enum", "const"})
+                    ):
+                        item = {**item, "type": "string"}
+                    coerced_branch.append(_codex_strict_json_schema(item))
+                else:
+                    coerced_branch.append(item)
+            strict[key] = coerced_branch
     defs = strict.get("$defs")
     if isinstance(defs, dict):
         strict["$defs"] = {
@@ -266,7 +282,13 @@ def apply_codex_harness_patch() -> None:
         elif permission_mode in {"read-only", "workspace-write", "danger-full-access"}:
             cmd.extend(["--sandbox", str(permission_mode)])
         else:
-            cmd.extend(["--sandbox", "workspace-write"])
+            # Default: bypass codex's own sandbox. Its workspace-write sandbox uses
+            # bwrap, which needs mount/user-namespace privileges Docker drops by
+            # default; in the (already externally sandboxed) build container those
+            # bwrap setups fail intermittently ("bwrap: Failed to make / slave:
+            # Permission denied"), silently blocking shell commands and file writes.
+            # An explicit permission_mode above still overrides this.
+            cmd.append("--dangerously-bypass-approvals-and-sandbox")
 
         prompt_for_codex = prompt
         if cwd:

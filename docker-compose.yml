@@ -17,6 +17,12 @@ services:
         # Local agentfield SDK (sibling repo) installed over PyPI in the image.
         agentfield_sdk: ../agentfield/sdk/python
     env_file: .env
+    # codex runtime needs user namespaces (unshare/bwrap) for shell-exec and
+    # its workspace-write sandbox; Docker's default seccomp profile blocks them.
+    # The build container is already externally sandboxed, so this is safe.
+    # Harmless for claude_code; required when SWE_DEFAULT_RUNTIME=codex.
+    security_opt:
+      - seccomp:unconfined
     environment:
       - AGENTFIELD_SERVER=http://control-plane:8080
       - NODE_ID=swe-planner

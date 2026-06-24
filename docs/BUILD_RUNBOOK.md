@@ -141,9 +141,38 @@ curl -s -X POST http://localhost:8080/api/v1/execute/async/swe-planner.resume_bu
   timestamps / wipe `.artifacts` (as root) before re-testing.
 - **`docker logs <node>` WITHOUT `--tail`/`--since` OOMs the session** (multi-hundred-MB
   debug JSON, exit 137). Always `--tail N`.
-- **codex runtime needs `--dangerously-bypass-approvals-and-sandbox`**: codex's
-  `workspace-write` sandbox uses `bwrap`, which the container kernel blocks; the build
-  container is already externally sandboxed, so bypassing is safe.
+- **codex structured output is SWE-AF's monkeypatch, NOT agentfield's provider.**
+  `swe_af/runtime/codex_harness_patch.py` replaces `CodexProvider.execute` at runtime
+  with a native path: `codex exec --json -m <model> --sandbox <mode> --output-schema
+  <schema.json> --output-last-message <out.json>`, prompt piped via **stdin** (no prompt
+  argv — so codex logs "Reading prompt from stdin…", which is normal banner noise, NOT
+  the error). Editing `agentfield/harness/providers/codex.py` has NO effect on builds.
+- **`Any`-typed Pydantic fields break codex `--output-schema` (the #1 PM failure).**
+  Codex forwards the schema to OpenAI strict structured-outputs, which rejects any union
+  branch lacking a `type` — e.g. `default_value: Any | None` (in `AskUserFormField`)
+  renders the Any arm as a bare `{}`. Result: `invalid_json_schema` (400), ~10s fail,
+  "failed to produce a valid PRD". Fixed in `_codex_strict_json_schema`
+  (codex_harness_patch.py) by coercing typeless union arms to `{"type":"string"}`.
+- **codex sandbox: default to `--dangerously-bypass-approvals-and-sandbox`.** codex's
+  `workspace-write` sandbox uses `bwrap` (mount/user namespaces) which the container
+  drops/blocks → intermittent `bwrap: Failed to make / slave: Permission denied`,
+  silently dropping shell commands & file writes. The patch's default branch now uses
+  the bypass (container is already externally sandboxed; an explicit `permission_mode`
+  still overrides). Belt-and-suspenders: the compose codex node also sets
+  `security_opt: [seccomp:unconfined]` so `unshare` works (`docker exec <node> bash -c
+  'unshare --user echo ok'` must print `ok`).
+- **planning loop uses `sonnet` under codex → fails (known follow-up).** The architecture
+  planning loop runs `model=sonnet ai_provider=codex` (sonnet isn't in the configurable
+  role map and codex can't run a Claude model). PM/architect/tech_lead are fine on
+  `gpt-5.5`; the loop needs routing to claude_code (OAuth token is present in the codex
+  node) or a codex model. Tracked separately.
+- **codex `~/.codex` mount flips `config.toml` to root-owned.** The codex node runs as
+  root; sharing the host `~/.codex` means codex rewrites `config.toml` as `root:root`
+  600, locking the user's interactive TUI (`Permission denied (os error 13)`). Solution
+  (now in compose): mount a dedicated `~/.codex-build` (isolated `config.toml` copy) with
+  `auth.json` symlinked to the live file (so OAuth stays fresh), plus the live `auth.json`
+  bind-mounted at the symlink target. One-off unlock: `docker run --rm -v
+  ~/.codex:/root/.codex alpine chown 1000:1000 /root/.codex/config.toml`.
 - **DB integration tests truncate tables** → run against a throwaway test DB, never the
   live one. The test DB superuser (`cosmichr_user`, `rolbypassrls`) **bypasses RLS**, so
   RLS-enforcement tests "fail" as an env artifact — not a code bug.
