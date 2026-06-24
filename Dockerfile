@@ -89,6 +89,18 @@ RUN pip install --no-cache-dir uv
 COPY requirements-docker.txt /app/requirements.txt
 RUN uv pip install --system -r /app/requirements.txt
 
+# Override the PyPI-published agentfield with the LOCAL checkout so SDK fixes
+# land in the image before they're published to PyPI. The source comes from the
+# `agentfield_sdk` build context (../agentfield/sdk/python), wired via
+# build.additional_contexts in docker-compose*.yml — or for a raw build pass
+# `docker build --build-context agentfield_sdk=../agentfield/sdk/python .`.
+# Only pyproject/README/package are copied (the 424MB .venv stays out). Local
+# version (0.1.90-rc.3) is LOWER than the PyPI 0.1.x already installed above, so
+# --reinstall-package forces the swap regardless of version.
+COPY --from=agentfield_sdk pyproject.toml README.md /app/vendor/agentfield/
+COPY --from=agentfield_sdk agentfield /app/vendor/agentfield/agentfield
+RUN uv pip install --system --reinstall-package agentfield /app/vendor/agentfield
+
 # Copy application code
 COPY . /app/
 
@@ -104,6 +116,16 @@ ENV PORT=8003 \
     # Runtime watchdog headroom (6h, the agentfield max). build() finalizes with
     # completed work at its own (smaller) budget BEFORE this fires, so a green
     # build is never reported "failed" by the watchdog. See _effective_build_budget_seconds.
+    #
+    # CRITICAL: the agentfield watchdog (async_config.AsyncConfig.from_environment)
+    # ONLY reads the AGENTFIELD_ASYNC_-prefixed names. The unprefixed
+    # `default_execution_timeout` below is read solely by SWE-AF's build-budget calc
+    # (_effective_build_budget_seconds). They MUST agree, or the budget and the real
+    # watchdog diverge: with only the unprefixed var set, the watchdog stayed at its
+    # 7200s default while the budget rose to 6h, so build budgeted past the 2h kill
+    # and green builds died as "failed". Set BOTH.
+    AGENTFIELD_ASYNC_DEFAULT_EXECUTION_TIMEOUT=21600 \
+    AGENTFIELD_ASYNC_MAX_EXECUTION_TIMEOUT=21600 \
     default_execution_timeout=21600
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

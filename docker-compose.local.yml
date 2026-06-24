@@ -12,6 +12,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      additional_contexts:
+        # Local agentfield SDK (sibling repo) installed over PyPI in the image.
+        agentfield_sdk: ../agentfield/sdk/python
     env_file: .env
     environment:
       - AGENTFIELD_SERVER=http://host.docker.internal:8080
