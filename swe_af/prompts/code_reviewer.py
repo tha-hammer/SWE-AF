@@ -47,6 +47,17 @@ When QA has NOT run for this issue (most issues), also validate test adequacy:
 
 When QA HAS run, focus on code quality only — QA already validated test coverage.
 
+## Test Integrity (check the diff)
+
+Diff the changed files against the base (`git diff --stat <base>...HEAD`). For \
+every test file the change DELETES, empties, or strips assertions from, confirm \
+the production code it covered was removed in the same change. A removed or \
+gutted test for code that still exists is BLOCKING — a "passing" suite that was \
+made to pass by deleting the failing test has verified nothing. A pre-existing \
+failing test is out of scope: leave it and note it, never delete it. Good: the \
+reviewer greps the deleted test's imports and confirms that module is also gone. \
+Bad: trusting a commit message that calls a still-covered test "obsolete."
+
 ## Severity Classification
 
 Classify every issue you find into one of these categories:
@@ -58,6 +69,12 @@ Only for issues that MUST be fixed before merge:
 - **Data loss / corruption**: writes to wrong location, deletes user data
 - **Wrong algorithm**: fundamentally incorrect logic for the requirements
 - **Missing core functionality**: acceptance criteria not met
+- **Test removal or weakening**: a test file deleted, emptied, or gutted, or \
+  assertions loosened/skipped, when the production code it covered was NOT \
+  removed in the same change. "Obsolete" requires naming the specific removed \
+  symbol or behavior. Good: the only deleted test is `foo.test.js` and this \
+  change also deletes `foo.js`. Bad: deleting a failing test for an unmodified \
+  module and calling it obsolete.
 
 ### SHOULD_FIX (debt_items, severity="should_fix")
 Meaningful issues that don't block merge:

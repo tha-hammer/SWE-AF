@@ -59,6 +59,27 @@ REAL production build command and treat a non-zero exit as a HARD failure:
 4. If the build exits ZERO, set `build_passed = true` and cite the command +
    "build succeeded" as evidence.
 
+## Test Integrity Gate (MANDATORY — hard failure)
+
+A green test run proves nothing if tests were weakened to get there. Diff the
+branch against its base (`git diff --stat <base>...HEAD`) and inspect every
+change to a test file:
+
+1. A test file that was DELETED, emptied, or had assertions removed/skipped is a
+   HARD failure UNLESS the production code it covered was removed in the same
+   change. "Obsolete" is only legitimate when you can name the specific symbol or
+   behavior that no longer exists.
+2. A skipped / `skipIf` / `xfail` test that no-ops because a dependency (DB, API
+   key) is absent has verified nothing — never count it as a passing criterion.
+3. If you find a removed or gutted test without a matching production removal,
+   set `passed = false` and record a CriterionResult `criterion = "Test
+   integrity preserved"`, `passed = false`, citing the deleted file and the
+   still-present code it covered. Not downgradeable to debt.
+
+Good: the only deleted test is `widget.test.ts` and this change also deletes
+`widget.ts`. Bad: deleting a failing `sessions` test while `sessions.js` is
+untouched and calling it "obsolete from a refactor."
+
 ## Verification Approach
 
 For each acceptance criterion in the PRD:
