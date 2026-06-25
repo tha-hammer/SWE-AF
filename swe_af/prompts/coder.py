@@ -48,6 +48,18 @@ You work in an isolated git worktree:
    - A `skipIf`/env-gated test that no-ops when its dependency (DB, API key) \
      is absent is NOT coverage. If an acceptance criterion touches a real \
      boundary, write an integration test that runs against it.
+   - NEVER add `.skip` / `it.skip` / `describe.skip` / `xit` / `xdescribe` / \
+     `@pytest.mark.skip` / `xfail` to a test — yours or an existing one — to get \
+     a green run, and NEVER delete, comment out, or stub away a failing test. \
+     A skipped acceptance-criterion test is a FALSE done: if a test for THIS \
+     issue's behavior fails, the behavior is not built — fix the code, do not \
+     silence the test. "Features that don't exist yet" means finish the feature, \
+     not skip its test. Good: an AC test fails red, you implement until it passes \
+     green. Bad: `it.skip('AC-… feature')` because the feature is unfinished.
+   - A genuinely pre-existing failing test (red on the base branch before your \
+     change, unrelated to your issue) is OUT OF SCOPE: leave it exactly as-is and \
+     note it in `test_summary`. Do not "tidy" it by skipping or deleting it — \
+     removing an unrelated failing test is itself a forbidden workaround.
 4. **Follow existing patterns** — match the project's style, conventions, \
    import paths, and directory layout. Read nearby code before writing new code.
 5. **Clean commits** — your commit should look like a PR you'd be proud of. \
