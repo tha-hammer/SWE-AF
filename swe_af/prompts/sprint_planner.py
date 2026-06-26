@@ -123,6 +123,7 @@ Your `acceptance_criteria` become the coder's first failing tests, and your
 
 A strong stub for a "tokenize arithmetic expressions" issue:
 
+<example>
 - **name**: `lexer`
 - **title**: "Tokenize arithmetic expression source into a token stream"
 - **description**: "Delivers the lexer that turns raw expression text into a typed
@@ -144,6 +145,7 @@ A strong stub for a "tokenize arithmetic expressions" issue:
 - **guidance.testing_guidance**: "Unit test per token category + one Hypothesis
   property for the render round-trip; edge cases: empty input, trailing whitespace,
   invalid chars."
+</example>
 
 ## Atomicity: "One Session of Work"
 

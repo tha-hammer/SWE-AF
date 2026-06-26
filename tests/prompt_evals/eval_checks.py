@@ -106,6 +106,41 @@ def domain_leaks(stem: str) -> list[str]:
     return [token for token in DOMAIN_LEAK_TOKENS if token in system_prompt]
 
 
+#: Planning prompts whose output is format-critical enough to earn few-shot
+#: ``<example>`` blocks (Phase 4): the architect emits interface contracts copied
+#: verbatim into code, and the sprint planner emits the TDD-framed decomposition.
+FORMAT_CRITICAL_PROMPTS = ["architect", "sprint_planner"]
+
+
+def example_blocks(stem: str) -> list[str]:
+    """Return the inner text of each ``<example>...</example>`` block in the prompt.
+
+    Asserts the tags are balanced and properly nested (no stray or crossed tags) —
+    a malformed few-shot block is a format defect the model would learn to imitate.
+    """
+    system_prompt = extract_system_prompt(stem)
+    open_count = system_prompt.count("<example>")
+    close_count = system_prompt.count("</example>")
+    assert open_count == close_count, (
+        f"{stem}.py has unbalanced <example> tags: "
+        f"{open_count} open vs {close_count} close"
+    )
+    blocks: list[str] = []
+    cursor = 0
+    while True:
+        start = system_prompt.find("<example>", cursor)
+        if start == -1:
+            break
+        end = system_prompt.find("</example>", start)
+        assert end != -1, f"{stem}.py has a <example> with no closing tag"
+        inner = system_prompt[start + len("<example>") : end]
+        assert "<example>" not in inner, f"{stem}.py has nested <example> tags"
+        assert inner.strip(), f"{stem}.py has an empty <example> block"
+        blocks.append(inner)
+        cursor = end + len("</example>")
+    return blocks
+
+
 # --------------------------------------------------------------------------- #
 # golden-output checks
 # --------------------------------------------------------------------------- #

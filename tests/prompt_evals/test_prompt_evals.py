@@ -64,6 +64,21 @@ def test_system_prompt_free_of_domain_leakage(stem: str) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# format-conformance net (Phase 4: few-shot <example> blocks)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("stem", ec.FORMAT_CRITICAL_PROMPTS)
+def test_format_critical_prompt_has_wellformed_examples(stem: str) -> None:
+    """The format-critical prompts ship at least one well-formed XML <example>.
+
+    ``example_blocks`` raises on unbalanced/nested/empty tags, so this both proves
+    the few-shot blocks exist and that they are format-clean (no malformed example
+    the model would learn to imitate).
+    """
+    blocks = ec.example_blocks(stem)
+    assert blocks, f"{stem} SYSTEM_PROMPT carries no <example> few-shot block"
+
+
+# --------------------------------------------------------------------------- #
 # golden-output positive net
 # --------------------------------------------------------------------------- #
 def _load_or_skip(fixture: str) -> dict:

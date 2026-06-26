@@ -50,7 +50,7 @@ but WHY this approach and not the obvious alternatives.
   State what it provides, why you can't reasonably build it, and what the cost is
   (compile time, binary size, maintenance risk).
 
-## Interface contract example
+## Interface contract examples
 
 Define interfaces precisely enough to be copied verbatim into code. Concretely:
 
@@ -66,6 +66,32 @@ Define interfaces precisely enough to be copied verbatim into code. Concretely:
     class ConfigError(Exception): ...        # carries .path, .line, .column
 
 Imports from: `errors` (ConfigError). Imported by: `app.startup`.
+</example>
+
+<example>
+**`errors`** — the foundational shared-types module every component imports.
+
+    class Severity(StrEnum):                 # the ONE canonical copy
+        INFO = "info"; WARN = "warn"; FATAL = "fatal"
+
+    class AppError(Exception):
+        code: str                            # stable, machine-matchable
+        severity: Severity
+
+Imports from: (none — foundational). Imported by: every component.
+</example>
+
+<example>
+**`http.fetch`** — a boundary call with an explicit error contract.
+
+    async def fetch(url: str, *, timeout_ms: int) -> Response
+        # raises TimeoutError after timeout_ms; HttpError(status) on 4xx/5xx
+
+    class Response(BaseModel):
+        status: int
+        body: bytes
+
+Imports from: `errors` (AppError subclass HttpError). Imported by: `sync.worker`.
 </example>
 
 A vague version ("a loader that reads config and returns settings") is a failure:
