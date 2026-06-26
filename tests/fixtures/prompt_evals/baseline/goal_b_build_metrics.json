@@ -1,0 +1,1072 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "depends_on": [],
+        "name": "build_metrics.domain",
+        "responsibility": "Define BuildRun entity with invariants. Immutable dataclass with id, start_time, end_time, exit_status fields. Provides duration_seconds property and is_success() method. Validates end_time >= start_time.",
+        "touches_files": [
+          "src/buildstats/build_metrics/domain.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.domain"
+        ],
+        "name": "build_metrics.persistence",
+        "responsibility": "JSONL-based repository for BuildRun objects. Owns storage format (JSONL at ~/.buildstats/metrics.jsonl). Provides save() for append-only writes and get_last_n() for retrieval with malformed line recovery and 10MB file size warnings.",
+        "touches_files": [
+          "src/buildstats/build_metrics/persistence.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.domain",
+          "build_metrics.persistence"
+        ],
+        "name": "build_metrics.service",
+        "responsibility": "Compute aggregate statistics over BuildRun collections. MetricsService provides compute_stats() method that calculates average duration and success rate. Returns StatsResult dataclass with avg_duration_seconds and success_rate fields.",
+        "touches_files": [
+          "src/buildstats/build_metrics/service.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.domain",
+          "build_metrics.persistence",
+          "build_metrics.service"
+        ],
+        "name": "build_metrics.__init__",
+        "responsibility": "Export public API from bounded context. Re-exports BuildRun, BuildMetricsRepository, MetricsService, and StatsResult for external consumers.",
+        "touches_files": [
+          "src/buildstats/build_metrics/__init__.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.domain",
+          "build_metrics.persistence"
+        ],
+        "name": "cli.record_command",
+        "responsibility": "CLI handler for 'buildstats record' subcommand. Parses --id, --start-time, --end-time, --exit-status arguments, constructs BuildRun, persists via repository, handles errors gracefully.",
+        "touches_files": [
+          "src/buildstats/cli.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.persistence",
+          "build_metrics.service"
+        ],
+        "name": "cli.stats_command",
+        "responsibility": "CLI handler for 'buildstats stats' subcommand. Accepts --last-n argument (default 10), invokes MetricsService.compute_stats(), outputs JSON to stdout with avg_duration_seconds and success_rate.",
+        "touches_files": [
+          "src/buildstats/cli.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.domain"
+        ],
+        "name": "tests.build_metrics.test_domain",
+        "responsibility": "Unit tests for domain layer. Covers BuildRun instantiation, duration_seconds property, is_success() method, invariant validation (end_time >= start_time), and immutability.",
+        "touches_files": [
+          "tests/build_metrics/test_domain.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.domain",
+          "build_metrics.persistence"
+        ],
+        "name": "tests.build_metrics.test_persistence",
+        "responsibility": "Unit tests for persistence layer. Covers save() file creation, JSONL append behavior, get_last_n() retrieval, malformed JSON handling, empty storage edge cases, and n <= 0 behavior.",
+        "touches_files": [
+          "tests/build_metrics/test_persistence.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "build_metrics.domain",
+          "build_metrics.persistence",
+          "build_metrics.service"
+        ],
+        "name": "tests.build_metrics.test_service",
+        "responsibility": "Unit tests for service layer. Covers compute_stats() accuracy for average duration, success rate calculation, respecting last_n parameter, and empty storage handling.",
+        "touches_files": [
+          "tests/build_metrics/test_service.py"
+        ]
+      },
+      {
+        "depends_on": [
+          "cli.record_command",
+          "cli.stats_command"
+        ],
+        "name": "tests.build_metrics.test_cli_integration",
+        "responsibility": "End-to-end integration tests for CLI commands. Covers 'record' persistence, 'stats' JSON output, empty storage handling, and time validation errors. Uses isolated HOME directory fixture.",
+        "touches_files": [
+          "tests/build_metrics/test_cli_integration.py"
+        ]
+      }
+    ],
+    "decisions": [
+      {
+        "decision": "Use @dataclass instead of TypedDict for StatsResult",
+        "rationale": "TypedDict is a static type hint only and doesn't provide a runtime constructor. Using @dataclass(frozen=True) provides both static typing AND runtime instantiation, fixing the critical bug where StatsResult(avg_duration_seconds=0.0, success_rate=0.0) would fail with AttributeError."
+      },
+      {
+        "decision": "JSONL file format over SQLite",
+        "rationale": "PRD explicitly scopes to file-based JSONL. JSONL is human-readable for debugging, append-only simple implementation, and requires zero dependencies. For ~10k runs (<10MB), performance is acceptable. Future migration to DB requires rewriting BuildMetricsRepository only (interface unchanged)."
+      },
+      {
+        "decision": "In-memory file read for get_last_n()",
+        "rationale": "Reading entire file and slicing last N lines is simple and reliable vs. complex reverse seek with variable-length lines. Performance warning at 10MB guides users before latency becomes problematic. Memory usage = O(file size), acceptable at 10MB."
+      },
+      {
+        "decision": "Explicit type hints on all interfaces including argparse.Namespace",
+        "rationale": "Tech lead feedback identified missing type hints. For autonomous agent execution, precision eliminates ambiguity. Every callable now has complete PEP 484 annotations so agents can copy signatures verbatim without type inference guessing."
+      },
+      {
+        "decision": "Log-and-skip for malformed JSONL lines",
+        "rationale": "PRD Risk #2 requires resilience to corruption. Raising exceptions would fail entire query and lose all data after first corruption. Skipping bad lines allows partial results while warning to stderr notifies user of data integrity issues."
+      },
+      {
+        "decision": "File size warning at 10MB threshold",
+        "rationale": "Tech lead required this (Issue #2). 10MB \u2248 50k runs (200 bytes/run). Reading entire file takes ~100ms (SSD) at this scale. Warning guides users before latency becomes problematic (1GB = 10s read). No automated mitigation as archiving is out-of-scope."
+      },
+      {
+        "decision": "Flat module structure under src/buildstats/build_metrics/",
+        "rationale": "Follows existing codebase pattern where all modules live directly under src/buildstats/. Each layer (domain, persistence, service) gets its own file to enable parallel agent execution without merge conflicts."
+      },
+      {
+        "decision": "argparse subcommands for record and stats",
+        "rationale": "Extends existing CLI pattern using add_subparsers(dest='command'). Consistent with existing 'run' subcommand. Keeps all CLI logic in single cli.py file with private _record_command() and _stats_command() handlers."
+      }
+    ],
+    "file_changes_overview": "Creates new bounded context module src/buildstats/build_metrics/ with 4 files (domain.py, persistence.py, service.py, __init__.py). Modifies existing src/buildstats/cli.py to add record and stats subcommands with handlers. Creates comprehensive test suite in tests/build_metrics/ with 4 test modules (test_domain.py, test_persistence.py, test_service.py, test_cli_integration.py) plus __init__.py. Total: 9 new files, 1 modified file. All components file-isolated for parallel execution.",
+    "interfaces": [
+      "BuildRun.__init__(id: str, start_time: datetime, end_time: datetime, exit_status: int)",
+      "BuildRun.duration_seconds -> float",
+      "BuildRun.is_success() -> bool",
+      "BuildMetricsRepository.__init__(storage_path: Path | None = None) -> None",
+      "BuildMetricsRepository.save(build_run: BuildRun) -> None",
+      "BuildMetricsRepository.get_last_n(n: int) -> List[BuildRun]",
+      "StatsResult.__init__(avg_duration_seconds: float, success_rate: float)",
+      "MetricsService.__init__(repository: BuildMetricsRepository) -> None",
+      "MetricsService.compute_stats(last_n: int) -> StatsResult",
+      "_record_command(args: argparse.Namespace) -> int",
+      "_stats_command(args: argparse.Namespace) -> int"
+    ],
+    "planning_artifacts": {
+      "bounded_contexts": [
+        {
+          "aggregates": [
+            {
+              "invariants": [
+                "end_time >= start_time",
+                "id is non-empty string",
+                "exit_status is integer"
+              ],
+              "name": "BuildRun",
+              "responsibility": "Immutable record of a single build run with timing and outcome"
+            }
+          ],
+          "domain_events": [],
+          "domain_services": [
+            {
+              "name": "MetricsService",
+              "responsibility": "Compute aggregate statistics (avg duration, success rate) over collections of BuildRun objects"
+            }
+          ],
+          "name": "build_metrics",
+          "purpose": "Persist build run data (id, start_time, end_time, exit_status) to disk and compute aggregate statistics (average duration, success rate) over last N runs."
+        }
+      ],
+      "current_diagram": {
+        "mermaid": "graph TB\n    CLI[cli.py: main, argparse setup]\n    Store[store.py: In-memory Store]\n    CLI --> Store\n    Store -.->|\"TODO: persistence\"| Disk[Disk Storage]\n    style Store fill:#f9f,stroke:#333,stroke-width:2px\n    style Disk fill:#fff,stroke:#333,stroke-dasharray: 5 5",
+        "title": "Current State"
+      },
+      "data_ownership": [
+        {
+          "bounded_context": "build_metrics",
+          "owns": [
+            "BuildRun records in ~/.buildstats/metrics.jsonl",
+            "JSONL storage format schema"
+          ],
+          "reads": []
+        }
+      ],
+      "event_backbone": {
+        "bus": {
+          "description": "No event bus required for this bounded context.",
+          "migration_notes": ""
+        },
+        "default_transport": "not_applicable",
+        "migration_justification": "This is a single bounded context with no inter-context communication. No event backbone needed."
+      },
+      "extraction_strategy": {
+        "description": "Not applicable - this is a new bounded context being added to existing codebase, not an extraction from monolith. The vertical slice is already isolated in separate module (src/buildstats/build_metrics/).",
+        "gated_on": "tested_slice"
+      },
+      "future_diagram": {
+        "mermaid": "graph TB\n    subgraph \"CLI Layer\"\n        CLI[cli.py: main, record_cmd, stats_cmd]\n    end\n    subgraph \"Build Metrics Bounded Context\"\n        Domain[domain.py: BuildRun dataclass]\n        Persistence[persistence.py: BuildMetricsRepository]\n        Service[service.py: MetricsService]\n        Domain --> Persistence\n        Persistence --> Service\n    end\n    CLI --> Domain\n    CLI --> Persistence\n    CLI --> Service\n    Persistence --> Storage[(~/.buildstats/metrics.jsonl)]\n    style Domain fill:#90EE90\n    style Persistence fill:#87CEEB\n    style Service fill:#FFD700",
+        "title": "Future State with Build-Metrics Bounded Context"
+      },
+      "guardrails": [
+        {
+          "enforcement": "Manual review. Every function signature includes parameter types and return type.",
+          "rule": "All modules must have complete type hints (PEP 484)"
+        },
+        {
+          "enforcement": "Import analysis. domain.py imports only from stdlib (dataclasses, datetime).",
+          "rule": "Domain layer has zero external dependencies"
+        },
+        {
+          "enforcement": "File boundary = isolation boundary. Module dependency graph enforces layer separation.",
+          "rule": "Each component owns distinct files (no merge conflicts)"
+        },
+        {
+          "enforcement": "get_last_n() checks file size and logs to stderr if > 10MB.",
+          "rule": "Performance warning at 10MB file size"
+        },
+        {
+          "enforcement": "try/except in get_last_n() catches JSON errors, prints to stderr, continues processing.",
+          "rule": "Malformed JSONL lines are logged and skipped"
+        },
+        {
+          "enforcement": "compute_stats() checks if runs list is empty and returns StatsResult(0.0, 0.0).",
+          "rule": "Empty datasets return zero statistics"
+        }
+      ],
+      "internal_event_schema": {
+        "event_name": "Not Applicable",
+        "event_version": "N/A",
+        "metadata_fields": [],
+        "payload_fields": []
+      },
+      "module_contracts": [
+        {
+          "consumes": [],
+          "module": "build_metrics.domain",
+          "notes": "Zero dependencies. Pure domain model with invariant validation.",
+          "provides": [
+            "BuildRun dataclass with id, start_time, end_time, exit_status",
+            "duration_seconds property",
+            "is_success() method"
+          ]
+        },
+        {
+          "consumes": [
+            "BuildRun from build_metrics.domain"
+          ],
+          "module": "build_metrics.persistence",
+          "notes": "Owns physical storage format and location. Handles malformed JSONL gracefully.",
+          "provides": [
+            "BuildMetricsRepository with save() and get_last_n()",
+            "JSONL serialization/deserialization",
+            "Storage directory creation"
+          ]
+        },
+        {
+          "consumes": [
+            "BuildMetricsRepository from build_metrics.persistence",
+            "BuildRun from build_metrics.domain"
+          ],
+          "module": "build_metrics.service",
+          "notes": "Business logic for analytics queries. Returns zeros for empty datasets.",
+          "provides": [
+            "MetricsService with compute_stats()",
+            "StatsResult dataclass with avg_duration_seconds and success_rate"
+          ]
+        },
+        {
+          "consumes": [
+            "BuildRun from build_metrics.domain",
+            "BuildMetricsRepository from build_metrics.persistence",
+            "MetricsService from build_metrics.service"
+          ],
+          "module": "cli",
+          "notes": "Wires user input to domain/service layers. Handles errors gracefully with exit codes.",
+          "provides": [
+            "buildstats record subcommand",
+            "buildstats stats subcommand"
+          ]
+        }
+      ],
+      "observability": [
+        {
+          "detail": "Log to stderr when metrics.jsonl exceeds 10MB to warn users of potential performance degradation.",
+          "name": "File size warnings"
+        },
+        {
+          "detail": "Log to stderr when JSONL lines are malformed, including line number and error details.",
+          "name": "Malformed data warnings"
+        },
+        {
+          "detail": "All CLI errors (ValueError, OSError, etc.) are caught and printed to stderr with descriptive messages before returning exit code 1.",
+          "name": "CLI error messages"
+        }
+      ],
+      "read_models": [],
+      "vertical_slice": {
+        "bounded_context": "build_metrics",
+        "description": "End-to-end flow: User runs 'buildstats record --id X --start-time T1 --end-time T2 --exit-status 0' \u2192 CLI parses args \u2192 BuildRun created with invariant validation \u2192 Repository saves to JSONL \u2192 File created at ~/.buildstats/metrics.jsonl. Then 'buildstats stats --last-n 10' \u2192 CLI parses args \u2192 Service fetches last 10 runs \u2192 Computes avg duration and success rate \u2192 Returns JSON to stdout. This slice proves the entire persistence and query pipeline.",
+        "domain_events": []
+      }
+    },
+    "summary": "This architecture adds a build_metrics bounded context to the buildstats CLI with domain-driven persistence of build run data. The design uses a clean layered architecture: domain layer (BuildRun dataclass with invariants), persistence layer (JSONL file storage), service layer (aggregate statistics computation), and CLI integration (record/stats subcommands). All components are file-isolated for parallel agent execution. Tech lead feedback resolved: TypedDict replaced with @dataclass for runtime construction, file size warning added, type hints completed, docstrings corrected."
+  },
+  "artifacts_dir": "/workspaces/dev/_prompt-eval-scratch/.artifacts",
+  "file_conflicts": [
+    {
+      "file": "src/buildstats/build_metrics/__init__.py",
+      "issues": [
+        "cli-integration",
+        "module-exports"
+      ],
+      "level": 3
+    }
+  ],
+  "issues": [
+    {
+      "acceptance_criteria": [
+        "Given valid timestamps with end >= start, when BuildRun is instantiated, then it stores all four fields (id, start_time, end_time, exit_status)",
+        "Given a BuildRun with start_time and end_time, when duration_seconds property is accessed, then it returns (end_time - start_time).total_seconds()",
+        "Given a BuildRun with exit_status=0, when is_success() is called, then it returns True",
+        "Given a BuildRun with exit_status != 0, when is_success() is called, then it returns False",
+        "Given timestamps where end_time < start_time, when BuildRun is instantiated, then it raises ValueError with message containing 'end_time' and 'start_time'",
+        "Given a BuildRun instance, when attempting to assign a new value to any field, then it raises an error (frozen dataclass)"
+      ],
+      "bounded_context": "build_metrics",
+      "contract_refs": [
+        "architecture.md \u00a7 Module Specifications \u00a7 1. Domain Layer",
+        "architecture.md lines 62-106 (canonical BuildRun implementation)"
+      ],
+      "depends_on": [],
+      "description": "Delivers the BuildRun frozen dataclass that represents a single build run record. Enforces the core invariant that end_time >= start_time and provides duration computation. This is the foundation entity consumed by all other layers.",
+      "domain_events": [],
+      "estimated_complexity": "medium",
+      "files_to_create": [
+        "src/buildstats/build_metrics/__init__.py",
+        "src/buildstats/build_metrics/domain.py"
+      ],
+      "files_to_modify": [],
+      "guardrails": [
+        "end_time >= start_time enforced in __post_init__",
+        "Frozen dataclass prevents mutation after construction"
+      ],
+      "guidance": {
+        "estimated_scope": "small",
+        "needs_deeper_qa": false,
+        "needs_new_tests": true,
+        "review_focus": "Verify __post_init__ raises ValueError for invalid time order. Confirm dataclass is frozen. Check that duration_seconds handles subsecond precision correctly.",
+        "risk_rationale": "Foundation entity with simple invariants. Straightforward dataclass implementation with well-defined validation.",
+        "testing_guidance": "Unit tests for each dataclass behavior (instantiation, properties, methods, invariants). Test both success and failure paths for validation. Verify immutability with frozen dataclass.",
+        "touches_interfaces": true
+      },
+      "name": "domain-model",
+      "observability": [],
+      "provides": [
+        "BuildRun dataclass with fields: id, start_time, end_time, exit_status",
+        "BuildRun.duration_seconds property returning float",
+        "BuildRun.is_success() method returning bool",
+        "Time invariant validation in __post_init__"
+      ],
+      "read_models": [],
+      "sequence_number": 1,
+      "slice_role": "",
+      "target_repo": "",
+      "testing_strategy": "Create tests/build_metrics/test_domain.py using pytest. Red\u2192Green\u2192Refactor, one behavior at a time, simplest first. \ud83d\udd34 valid instantiation (AC1): write test_buildrun_creation that fails because domain.py doesn't exist. \ud83d\udfe2 create domain.py with minimal BuildRun dataclass (4 fields, frozen=True). \ud83d\udd34 duration_seconds property (AC2) \u2192 \ud83d\udfe2 add @property. \ud83d\udd34 is_success for exit_status=0 (AC3) \u2192 \ud83d\udd34 is_success for exit_status\u22600 (AC4) \u2192 \ud83d\udfe2 implement is_success() method. \ud83d\udd34 time invariant violation (AC5) \u2192 \ud83d\udfe2 add __post_init__ validation. \ud83d\udd34 immutability test (AC6) \u2192 already passes with frozen=True. \ud83d\udd35 Refactor: extract validation logic if needed, add comprehensive docstrings. Covers AC1\u2013AC6.",
+      "title": "Create BuildRun domain entity with time invariants",
+      "verification": [
+        {
+          "command": "python -c \"from buildstats.build_metrics.domain import BuildRun; import datetime; br = BuildRun(id='abc', start_time=datetime.datetime.now(), end_time=datetime.datetime.now(), exit_status=0); assert br.id == 'abc' and br.exit_status == 0\" && echo PASS",
+          "description": "BuildRun can be instantiated",
+          "kind": "test"
+        },
+        {
+          "command": "python -m pytest tests/build_metrics/test_domain.py -v",
+          "description": "Domain tests pass",
+          "kind": "test"
+        }
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "Given a new BuildMetricsRepository with no storage_path override, when instantiated, then it uses ~/.buildstats/metrics.jsonl as the default path",
+        "Given a BuildRun object, when save() is called, then it creates ~/.buildstats/ directory if missing and appends a JSON line with keys: id, start_time (ISO8601), end_time (ISO8601), exit_status",
+        "Given 5 persisted runs, when get_last_n(3) is called, then it returns a list of 3 BuildRun objects representing the last 3 lines from JSONL",
+        "Given a non-existent storage file, when get_last_n(10) is called, then it returns an empty list without raising an error",
+        "Given get_last_n(0) or get_last_n(-5), when called, then it returns an empty list",
+        "Given a JSONL file with valid line, invalid line, valid line, when get_last_n(10) is called, then it returns 2 BuildRun objects and logs a warning to stderr for the malformed line",
+        "Given a storage file > 10MB, when get_last_n() is called, then it logs a performance warning to stderr mentioning file size and archiving",
+        "Given two save() calls, when inspecting the JSONL file, then it contains exactly two lines, each a valid JSON object, ordered chronologically"
+      ],
+      "bounded_context": "build_metrics",
+      "contract_refs": [
+        "architecture.md \u00a7 Module Specifications \u00a7 2. Persistence Layer",
+        "architecture.md lines 120-258 (canonical BuildMetricsRepository implementation)"
+      ],
+      "depends_on": [
+        "domain-model"
+      ],
+      "description": "Delivers the BuildMetricsRepository that serializes BuildRun objects to append-only JSONL storage at ~/.buildstats/metrics.jsonl. Handles deserialization, malformed-line recovery, and file-size warnings. This is the data gateway for all build metrics.",
+      "domain_events": [
+        "BuildRunRecorded",
+        "StorageCorruptionDetected"
+      ],
+      "estimated_complexity": "medium",
+      "files_to_create": [
+        "src/buildstats/build_metrics/persistence.py"
+      ],
+      "files_to_modify": [],
+      "guardrails": [
+        "Malformed JSONL lines logged to stderr and skipped",
+        "File size >10MB triggers performance warning",
+        "Storage directory created automatically with mkdir(parents=True, exist_ok=True)"
+      ],
+      "guidance": {
+        "estimated_scope": "medium",
+        "needs_deeper_qa": false,
+        "needs_new_tests": true,
+        "review_focus": "Verify malformed JSONL lines are skipped with stderr warnings (not exceptions). Confirm file size warning triggers at >10MB. Check that _ensure_storage_dir uses mkdir(parents=True, exist_ok=True). Ensure get_last_n returns most-recent-last ordering.",
+        "risk_rationale": "Core I/O layer with error recovery. Well-defined error handling strategy (log-and-skip). File operations are standard library, low risk.",
+        "testing_guidance": "Unit tests with tmp_path fixtures for file I/O isolation. Test save/load round-trip, edge cases (empty file, n<=0, malformed JSON), and warnings (use capsys to capture stderr). Property test for save/get_last_n round-trip invariant.",
+        "touches_interfaces": true
+      },
+      "name": "persistence-layer",
+      "observability": [
+        "Log malformed JSONL lines to stderr with line number",
+        "Log file size warning when >10MB"
+      ],
+      "provides": [
+        "BuildMetricsRepository class with __init__(storage_path: Path | None = None)",
+        "BuildMetricsRepository.save(build_run: BuildRun) -> None",
+        "BuildMetricsRepository.get_last_n(n: int) -> List[BuildRun]",
+        "JSONL serialization/deserialization logic",
+        "Malformed-line error recovery (log and skip)",
+        "File size warning (>10MB)"
+      ],
+      "read_models": [],
+      "sequence_number": 2,
+      "slice_role": "",
+      "target_repo": "",
+      "testing_strategy": "Create tests/build_metrics/test_persistence.py using pytest with tmp_path fixtures. Red\u2192Green\u2192Refactor, simplest behaviors first. \ud83d\udd34 default storage path (AC1) \u2192 \ud83d\udfe2 minimal __init__ with Path.home(). \ud83d\udd34 save creates file and directory (AC2) \u2192 \ud83d\udfe2 implement save() with _ensure_storage_dir(). \ud83d\udd34 save appends valid JSONL (AC8) \u2192 \ud83d\udfe2 add JSON serialization with isoformat(). \ud83d\udd34 get_last_n with empty file (AC4) \u2192 \ud83d\udfe2 implement exists() check. \ud83d\udd34 get_last_n(0) and negative (AC5) \u2192 \ud83d\udfe2 add n <= 0 guard. \ud83d\udd34 get_last_n returns correct count and order (AC3) \u2192 \ud83d\udfe2 implement _read_last_n_lines and deserialization. \ud83d\udd34 malformed JSON handling (AC6) \u2192 \ud83d\udfe2 add try/except with stderr logging (use capsys fixture). \ud83d\udd34 file size warning (AC7) \u2192 \ud83d\udfe2 add stat().st_size check with stderr warning. \ud83d\udd35 Refactor: extract _read_last_n_lines helper, consolidate error messages. Property test (Hypothesis): for any list of BuildRuns, saving then retrieving preserves all fields. Covers AC1\u2013AC8.",
+      "title": "Implement JSONL repository for BuildRun persistence",
+      "verification": [
+        {
+          "command": "python -c \"from buildstats.build_metrics.persistence import BuildMetricsRepository; BuildMetricsRepository()\" && echo PASS",
+          "description": "BuildMetricsRepository can be instantiated",
+          "kind": "test"
+        },
+        {
+          "command": "python -m pytest tests/build_metrics/test_persistence.py -v",
+          "description": "Persistence tests pass",
+          "kind": "test"
+        }
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "Given an empty repository (0 runs), when compute_stats(10) is called, then it returns StatsResult(avg_duration_seconds=0.0, success_rate=0.0)",
+        "Given 3 runs with durations 60s, 120s, 180s (all exit_status=0), when compute_stats(3) is called, then it returns StatsResult with avg_duration_seconds within 0.01 of 120.0",
+        "Given 4 runs with exit_status [0, 1, 0, 1], when compute_stats(4) is called, then it returns StatsResult with success_rate within 0.01 of 0.5",
+        "Given 10 runs (first 5 failures, last 5 successes), when compute_stats(5) is called, then it returns StatsResult with success_rate=1.0 (only analyzes last 5)",
+        "Given compute_stats(0) or compute_stats(-5), when called, then it returns StatsResult(avg_duration_seconds=0.0, success_rate=0.0)"
+      ],
+      "bounded_context": "build_metrics",
+      "contract_refs": [
+        "architecture.md \u00a7 Module Specifications \u00a7 3. Service Layer",
+        "architecture.md lines 277-347 (canonical MetricsService implementation)"
+      ],
+      "depends_on": [
+        "domain-model",
+        "persistence-layer"
+      ],
+      "description": "Delivers MetricsService that computes average duration and success rate over the last N BuildRun records. Handles empty-set edge cases (returns zeros) and provides the StatsResult read model for downstream consumption.",
+      "domain_events": [
+        "StatsComputed"
+      ],
+      "estimated_complexity": "medium",
+      "files_to_create": [
+        "src/buildstats/build_metrics/service.py"
+      ],
+      "files_to_modify": [],
+      "guardrails": [
+        "Empty-set returns zeros (no division-by-zero)",
+        "Success rate bounded to [0.0, 1.0]"
+      ],
+      "guidance": {
+        "estimated_scope": "small",
+        "needs_deeper_qa": false,
+        "needs_new_tests": true,
+        "review_focus": "Verify empty-list check returns StatsResult(0.0, 0.0). Confirm division-by-zero is prevented. Check that success_rate uses run.is_success() method from domain layer.",
+        "risk_rationale": "Pure computation layer with no I/O. Simple arithmetic over collections. Well-defined edge cases.",
+        "testing_guidance": "Unit tests with mock/temp repository. Test empty-set behavior, average/rate computations, and windowing. Property test for invariants (success_rate in [0,1], avg_duration >= 0).",
+        "touches_interfaces": true
+      },
+      "name": "service-layer",
+      "observability": [],
+      "provides": [
+        "StatsResult dataclass with avg_duration_seconds and success_rate fields",
+        "MetricsService class with __init__(repository: BuildMetricsRepository)",
+        "MetricsService.compute_stats(last_n: int) -> StatsResult",
+        "Empty-set zero-statistics behavior"
+      ],
+      "read_models": [
+        "StatsResult"
+      ],
+      "sequence_number": 3,
+      "slice_role": "",
+      "target_repo": "",
+      "testing_strategy": "Create tests/build_metrics/test_service.py using pytest with temp_repo fixture (BuildMetricsRepository backed by tmp_path). Red\u2192Green\u2192Refactor, simplest behaviors first. \ud83d\udd34 empty storage returns zeros (AC1) \u2192 \ud83d\udfe2 minimal compute_stats with empty-list guard returning StatsResult(0.0, 0.0). \ud83d\udd34 avg_duration with 3 runs (AC2) \u2192 \ud83d\udfe2 implement sum(run.duration_seconds)/len(runs). \ud83d\udd34 success_rate with mixed statuses (AC3) \u2192 \ud83d\udfe2 implement sum(run.is_success())/len(runs). \ud83d\udd34 respects last_n windowing (AC4) \u2192 already works via repository.get_last_n(). \ud83d\udd34 n<=0 returns zeros (AC5) \u2192 already works via repository.get_last_n() contract. \ud83d\udd35 Refactor: extract any duplicated summing logic. Property test (Hypothesis): for any list of runs, 0.0 <= success_rate <= 1.0 and avg_duration >= 0.0. Covers AC1\u2013AC5.",
+      "title": "Implement aggregate statistics computation service",
+      "verification": [
+        {
+          "command": "python -c \"from buildstats.build_metrics.persistence import BuildMetricsRepository; from buildstats.build_metrics.service import MetricsService; import tempfile; from pathlib import Path; repo = BuildMetricsRepository(Path(tempfile.mktemp())); svc = MetricsService(repo); print('PASS')\"",
+          "description": "MetricsService can be instantiated",
+          "kind": "test"
+        },
+        {
+          "command": "python -m pytest tests/build_metrics/test_service.py -v",
+          "description": "Service tests pass",
+          "kind": "test"
+        }
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "Given 'buildstats record --help', when executed, then the output includes the '--id' flag description",
+        "Given 'buildstats stats --help', when executed, then the output includes the '--last-n' flag description",
+        "Given 'buildstats record --id test1 --start-time 2026-06-26T10:00:00 --end-time 2026-06-26T10:05:00 --exit-status 0', when executed, then it creates ~/.buildstats/metrics.jsonl and returns exit code 0",
+        "Given a persisted run with id='test1', when 'buildstats record' retrieves it via repository.get_last_n(1), then the returned BuildRun has id='test1'",
+        "Given 'buildstats stats --last-n 5' with no persisted runs, when executed, then it prints JSON with avg_duration_seconds=0 and success_rate=0 and returns exit code 0",
+        "Given 'buildstats stats --last-n 5' with 3 persisted runs, when executed, then it prints valid JSON to stdout containing 'avg_duration_seconds' and 'success_rate' keys",
+        "Given 'buildstats record' with end_time < start_time, when executed, then it prints an error to stderr and returns exit code 1",
+        "Given 'buildstats stats' with no --last-n flag, when executed, then it defaults to last_n=10"
+      ],
+      "bounded_context": "build_metrics",
+      "contract_refs": [
+        "architecture.md \u00a7 Module Specifications \u00a7 4. CLI Integration",
+        "architecture.md lines 363-502 (canonical CLI implementation)"
+      ],
+      "depends_on": [
+        "domain-model",
+        "persistence-layer",
+        "service-layer"
+      ],
+      "description": "Extends the existing buildstats CLI with two new subcommands: 'record' (persists a BuildRun) and 'stats' (queries aggregate statistics). Integrates domain, persistence, and service layers into the argparse-based CLI entrypoint. This is the vertical slice that exposes the full feature to end users.",
+      "domain_events": [
+        "BuildRunRecorded",
+        "StatsComputed"
+      ],
+      "estimated_complexity": "medium",
+      "files_to_create": [],
+      "files_to_modify": [
+        "src/buildstats/cli.py",
+        "src/buildstats/build_metrics/__init__.py"
+      ],
+      "guardrails": [
+        "ValueError and OSError caught in _record_command, logged to stderr",
+        "Exception caught in _stats_command, logged to stderr",
+        "All errors return exit code 1"
+      ],
+      "guidance": {
+        "estimated_scope": "medium",
+        "needs_deeper_qa": true,
+        "needs_new_tests": true,
+        "review_focus": "Verify _record_command catches ValueError and OSError, logs to stderr, returns exit code 1. Confirm _stats_command outputs single-line JSON (no pretty-printing). Check that imports are added correctly at top of cli.py. Ensure main() dispatch includes new elif branches.",
+        "risk_rationale": "Integration point wiring multiple layers. Higher complexity due to argparse setup, error handling, and JSON output formatting. Needs deeper QA to verify end-to-end contracts.",
+        "testing_guidance": "Integration tests using monkeypatch for HOME isolation. Test both subcommands end-to-end with real file I/O (temp directories). Verify help text, exit codes, JSON output format, and error handling. Use capsys to capture stdout/stderr.",
+        "touches_interfaces": true
+      },
+      "name": "cli-integration",
+      "observability": [
+        "Error messages logged to stderr for failed record/stats commands"
+      ],
+      "provides": [
+        "buildstats record subcommand with --id, --start-time, --end-time, --exit-status flags",
+        "buildstats stats subcommand with --last-n flag (default 10)",
+        "_record_command(args: argparse.Namespace) -> int function",
+        "_stats_command(args: argparse.Namespace) -> int function",
+        "CLI dispatch logic routing to record/stats handlers",
+        "JSON output to stdout for stats command"
+      ],
+      "read_models": [
+        "StatsResult"
+      ],
+      "sequence_number": 4,
+      "slice_role": "vertical-slice",
+      "target_repo": "",
+      "testing_strategy": "Create tests/build_metrics/test_cli_integration.py using pytest with monkeypatch to isolate HOME directory (prevents polluting real ~/.buildstats). Red\u2192Green\u2192Refactor, CLI behaviors simplest first. \ud83d\udd34 record --help shows --id (AC1) \u2192 \ud83d\udfe2 add record subparser with add_argument('--id'). \ud83d\udd34 stats --help shows --last-n (AC2) \u2192 \ud83d\udfe2 add stats subparser with add_argument('--last-n', default=10). \ud83d\udd34 record creates file and returns 0 (AC3) \u2192 \ud83d\udfe2 implement _record_command with BuildRun instantiation and repository.save(). \ud83d\udd34 record persists data retrievable via repo (AC4) \u2192 already works from AC3. \ud83d\udd34 stats with empty storage returns zeros (AC5) \u2192 \ud83d\udfe2 implement _stats_command with service.compute_stats() and json.dumps(). \ud83d\udd34 stats with data returns JSON (AC6) \u2192 already works from AC5. \ud83d\udd34 record with invalid time order returns error (AC7) \u2192 \ud83d\udfe2 add try/except in _record_command catching ValueError. \ud83d\udd34 stats defaults to last_n=10 (AC8) \u2192 already set in add_argument default. \ud83d\udd35 Refactor: update __init__.py exports, ensure imports are at top of cli.py. Covers AC1\u2013AC8.",
+      "title": "Wire record and stats subcommands into CLI",
+      "verification": [
+        {
+          "command": "buildstats record --help | grep -q 'id'",
+          "description": "record command help includes --id",
+          "kind": "check"
+        },
+        {
+          "command": "buildstats stats --help | grep -q 'last-n'",
+          "description": "stats command help includes --last-n",
+          "kind": "check"
+        },
+        {
+          "command": "python -m pytest tests/build_metrics/test_cli_integration.py -v",
+          "description": "CLI integration tests pass",
+          "kind": "test"
+        }
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "Given 'from buildstats.build_metrics import BuildRun', when imported, then BuildRun is available without importing domain submodule",
+        "Given 'from buildstats.build_metrics import BuildMetricsRepository', when imported, then BuildMetricsRepository is available",
+        "Given 'from buildstats.build_metrics import MetricsService, StatsResult', when imported, then both classes are available",
+        "Given the __init__.py file, when inspected, then __all__ contains exactly ['BuildRun', 'BuildMetricsRepository', 'MetricsService', 'StatsResult']"
+      ],
+      "bounded_context": "build_metrics",
+      "contract_refs": [
+        "architecture.md \u00a7 Module Specifications \u00a7 5. Module Initialization",
+        "architecture.md lines 516-543 (canonical __init__.py)"
+      ],
+      "depends_on": [
+        "domain-model",
+        "persistence-layer",
+        "service-layer"
+      ],
+      "description": "Updates build_metrics/__init__.py to export BuildRun, BuildMetricsRepository, MetricsService, and StatsResult as the public API of the bounded context. Enables clean imports for downstream consumers and tests.",
+      "domain_events": [],
+      "estimated_complexity": "medium",
+      "files_to_create": [],
+      "files_to_modify": [
+        "src/buildstats/build_metrics/__init__.py"
+      ],
+      "guardrails": [],
+      "guidance": {
+        "estimated_scope": "trivial",
+        "needs_deeper_qa": false,
+        "needs_new_tests": true,
+        "review_focus": "Verify __all__ matches actual imports. Confirm no circular import issues.",
+        "risk_rationale": "Trivial package initialization. No logic, just re-exports.",
+        "testing_guidance": "Simple import tests verifying each exported symbol is accessible. Test __all__ contents.",
+        "touches_interfaces": false
+      },
+      "name": "module-exports",
+      "observability": [],
+      "provides": [
+        "Public API exports via __all__",
+        "Simplified import paths for downstream consumers"
+      ],
+      "read_models": [],
+      "sequence_number": 5,
+      "slice_role": "",
+      "target_repo": "",
+      "testing_strategy": "Create tests/build_metrics/test_exports.py using pytest. Red\u2192Green\u2192Refactor. \ud83d\udd34 import BuildRun from package (AC1) \u2192 \ud83d\udfe2 add 'from .domain import BuildRun' to __init__.py. \ud83d\udd34 import BuildMetricsRepository (AC2) \u2192 \ud83d\udfe2 add 'from .persistence import BuildMetricsRepository'. \ud83d\udd34 import MetricsService and StatsResult (AC3) \u2192 \ud83d\udfe2 add 'from .service import MetricsService, StatsResult'. \ud83d\udd34 __all__ contains all four exports (AC4) \u2192 \ud83d\udfe2 add __all__ list. \ud83d\udd35 Refactor: ensure imports are alphabetically ordered, add module docstring. Covers AC1\u2013AC4.",
+      "title": "Export public API from build_metrics package",
+      "verification": [
+        {
+          "command": "python -c \"from buildstats.build_metrics import BuildRun, BuildMetricsRepository, MetricsService, StatsResult; print('PASS')\"",
+          "description": "All public API symbols importable",
+          "kind": "check"
+        }
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "Given the PRD AC1 command, when executed, then it exits 0 (persistence layer exists)",
+        "Given the PRD AC2 command, when executed, then it exits 0 (BuildRun dataclass works)",
+        "Given the PRD AC3 command, when executed, then it exits 0 (record --help shows --id)",
+        "Given the PRD AC4 command sequence, when executed, then it exits 0 (record persists data)",
+        "Given the PRD AC5 command, when executed, then it exits 0 (stats --help shows --last-n)",
+        "Given the PRD AC6 command, when executed, then it exits 0 (stats returns valid JSON)",
+        "Given the PRD AC7 command sequence (3 runs: 60s, 120s, 180s), when executed, then it exits 0 (avg_duration \u2248 120.0)",
+        "Given the PRD AC8 command sequence (4 runs: 2 success, 2 failure), when executed, then it exits 0 (success_rate \u2248 0.5)",
+        "Given the PRD AC9 command (empty storage), when executed, then it exits 0 (zeros returned)",
+        "Given the PRD AC10 command, when executed, then it exits 0 (storage file exists)",
+        "Given pytest run on tests/build_metrics/, when executed, then all tests pass (PRD AC11)"
+      ],
+      "bounded_context": "build_metrics",
+      "contract_refs": [
+        "prd.md \u00a7 Acceptance Criteria (lines 9-19)"
+      ],
+      "depends_on": [
+        "domain-model",
+        "persistence-layer",
+        "service-layer",
+        "cli-integration",
+        "module-exports"
+      ],
+      "description": "Executes all PRD-level acceptance criteria as integration tests to confirm the build-metrics bounded context delivers the specified contracts. This is the final verification gate before completion.",
+      "domain_events": [],
+      "estimated_complexity": "medium",
+      "files_to_create": [
+        "tests/build_metrics/__init__.py",
+        "tests/build_metrics/test_prd_acceptance.py"
+      ],
+      "files_to_modify": [],
+      "guardrails": [],
+      "guidance": {
+        "estimated_scope": "small",
+        "needs_deeper_qa": false,
+        "needs_new_tests": true,
+        "review_focus": "Verify each test executes the EXACT command from PRD acceptance criteria. Confirm tests use isolated temp directories (no ~/.buildstats pollution). Check that test names map 1:1 to PRD AC numbers.",
+        "risk_rationale": "Verification-only issue. No implementation\u2014just test scaffolding. Low risk, confirms feature completeness.",
+        "testing_guidance": "Black-box integration tests executing CLI commands via subprocess. Use monkeypatch for HOME isolation. Test exact PRD acceptance criteria commands.",
+        "touches_interfaces": false
+      },
+      "name": "end-to-end-verification",
+      "observability": [],
+      "provides": [
+        "PRD acceptance criteria validation",
+        "End-to-end integration test suite"
+      ],
+      "read_models": [],
+      "sequence_number": 6,
+      "slice_role": "",
+      "target_repo": "",
+      "testing_strategy": "Create tests/build_metrics/test_prd_acceptance.py using pytest with subprocess to execute actual CLI commands (not just Python function calls). Red\u2192Green sequence: \ud83d\udd34 For each PRD AC (AC1-AC11), write a test that executes the exact shell command from the PRD and asserts exit code 0. \ud83d\udfe2 Tests pass once all prior issues are implemented. \ud83d\udd35 Refactor: extract common setup (temp HOME directory) into fixtures. These are black-box integration tests from the user's perspective\u2014no internal API knowledge assumed. Covers all 11 PRD acceptance criteria.",
+      "title": "Verify full feature against PRD acceptance criteria",
+      "verification": [
+        {
+          "command": "python -m pytest tests/build_metrics/ -v",
+          "description": "All build_metrics tests pass",
+          "kind": "test"
+        }
+      ]
+    }
+  ],
+  "levels": [
+    [
+      "domain-model"
+    ],
+    [
+      "persistence-layer"
+    ],
+    [
+      "service-layer"
+    ],
+    [
+      "cli-integration",
+      "module-exports"
+    ],
+    [
+      "end-to-end-verification"
+    ]
+  ],
+  "planning_artifacts": {
+    "bounded_contexts": [
+      {
+        "aggregates": [
+          {
+            "invariants": [
+              "end_time must be >= start_time (temporal consistency)",
+              "id must be non-empty string (identity requirement)",
+              "exit_status must be integer (Unix convention)"
+            ],
+            "name": "BuildRun",
+            "responsibility": "Immutable record of a single build execution with temporal and outcome data"
+          }
+        ],
+        "domain_events": [
+          {
+            "name": "BuildRunRecorded",
+            "payload_summary": "BuildRun aggregate state (id, start_time, end_time, exit_status, duration_seconds)",
+            "producer_context": "build_metrics"
+          },
+          {
+            "name": "StatsComputed",
+            "payload_summary": "Aggregate statistics result (avg_duration_seconds, success_rate, sample_size, timestamp)",
+            "producer_context": "build_metrics"
+          },
+          {
+            "name": "StorageCorruptionDetected",
+            "payload_summary": "Malformed JSONL line details (line_number, error_type, raw_content)",
+            "producer_context": "build_metrics"
+          },
+          {
+            "name": "StorageThresholdExceeded",
+            "payload_summary": "File size warning (file_size_bytes, threshold_bytes, recommendation)",
+            "producer_context": "build_metrics"
+          }
+        ],
+        "domain_services": [
+          {
+            "name": "MetricsService",
+            "responsibility": "Compute aggregate statistics (average duration, success rate) over collections of BuildRun aggregates"
+          },
+          {
+            "name": "BuildMetricsRepository",
+            "responsibility": "Persist and retrieve BuildRun aggregates using JSONL storage, enforcing append-only semantics"
+          }
+        ],
+        "name": "build_metrics",
+        "purpose": "Persist and analyze build run data to provide aggregate statistics on build performance and reliability"
+      }
+    ],
+    "current_diagram": {
+      "mermaid": "graph TB\n    CLI[\"CLI Layer<br/>(argparse)\"]\n    RUN[\"run command<br/>(prints 'ok')\"]\n    \n    CLI --> RUN\n    \n    style CLI fill:#e1f5ff\n    style RUN fill:#fff4e1",
+      "title": "Current State - BuildStats CLI (Pre-Metrics)"
+    },
+    "data_ownership": [
+      {
+        "bounded_context": "build_metrics",
+        "owns": [
+          "~/.buildstats/metrics.jsonl (BuildRun persistence)",
+          "BuildRun aggregate lifecycle (create, validate)",
+          "StatsResult read model computation"
+        ],
+        "reads": [
+          "~/.buildstats/metrics.jsonl (for query operations only)"
+        ]
+      }
+    ],
+    "event_backbone": {
+      "bus": {
+        "description": "Synchronous in-process event bus for v1. Events are published to a simple observer list. Handlers execute within the same call stack as the publisher. No persistence, no retry, no ordering guarantees beyond synchronous execution.",
+        "migration_notes": "Future migration to async/queue-based transport justified ONLY if: (1) CLI latency becomes unacceptable due to event handler overhead, (2) need to decouple write path from event processing, or (3) introducing cross-context event consumers. Current design assumes single-context, single-process execution."
+      },
+      "default_transport": "in_process",
+      "migration_justification": ""
+    },
+    "extraction_strategy": {
+      "description": "Extraction of build_metrics bounded context into standalone library gated on: (1) vertical slice functional test passing (record + stats round-trip), (2) all unit tests passing (domain, persistence, service layers), (3) integration test confirming event emission for BuildRunRecorded and StatsComputed. Extraction steps: (1) create separate repo buildstats-metrics-lib, (2) move src/buildstats/build_metrics/ to lib root, (3) extract event bus interface to abstract base class (currently implicit), (4) publish as pip package, (5) update buildstats CLI to depend on buildstats-metrics-lib, (6) maintain JSONL storage contract for backward compatibility. Extraction enables: reuse of build_metrics in other tools (CI dashboards, notification services), independent versioning of domain vs presentation layers, clearer bounded context isolation. Do NOT extract until slice is tested and functional - premature extraction risks interface instability.",
+      "gated_on": "tested_slice"
+    },
+    "future_diagram": {
+      "mermaid": "graph TB\n    subgraph \"Presentation Layer\"\n        CLI[\"CLI Interface<br/>(argparse)\"]\n        RECORD[\"record command\"]\n        STATS[\"stats command\"]\n        RUN[\"run command\"]\n    end\n    \n    subgraph \"Build-Metrics Bounded Context\"\n        subgraph \"Domain Layer\"\n            BR[\"BuildRun<br/>(Aggregate Root)\"]\n            INV[\"Invariants:<br/>end_time >= start_time\"]\n        end\n        \n        subgraph \"Persistence Layer\"\n            REPO[\"BuildMetricsRepository\"]\n            JSONL[(\"~/.buildstats/<br/>metrics.jsonl\")]\n        end\n        \n        subgraph \"Service Layer\"\n            SVC[\"MetricsService\"]\n            STATS_MODEL[\"StatsResult<br/>(Read Model)\"]\n        end\n        \n        subgraph \"Event Stream\"\n            E1[\"BuildRunRecorded<br/>(Domain Event)\"]\n            E2[\"StatsComputed<br/>(Domain Event)\"]\n        end\n    end\n    \n    subgraph \"Event Backbone\"\n        BUS[\"In-Process Event Bus<br/>(synchronous)\"]\n    end\n    \n    CLI --> RECORD\n    CLI --> STATS\n    CLI --> RUN\n    \n    RECORD --> BR\n    RECORD --> REPO\n    STATS --> SVC\n    \n    BR -.\"validates\".-> INV\n    REPO --> JSONL\n    SVC --> REPO\n    SVC --> STATS_MODEL\n    \n    REPO -.\"emits\".-> E1\n    SVC -.\"emits\".-> E2\n    E1 --> BUS\n    E2 --> BUS\n    \n    style CLI fill:#e1f5ff\n    style BR fill:#c8e6c9\n    style REPO fill:#fff9c4\n    style SVC fill:#ffccbc\n    style BUS fill:#f3e5f5\n    style JSONL fill:#ffe0b2",
+      "title": "Future State - BuildStats with Build-Metrics Context"
+    },
+    "guardrails": [
+      {
+        "enforcement": "Static analysis: grep -r 'from.*persistence\\|from.*service' src/buildstats/build_metrics/domain.py must return empty. Enforced via pre-commit hook or CI check.",
+        "rule": "build_metrics.domain must have zero dependencies on build_metrics.persistence or build_metrics.service"
+      },
+      {
+        "enforcement": "Runtime assertion in event bus: assert event.metadata['producer_context'] in ['build_metrics']. Enforced at event publication time.",
+        "rule": "All domain events must include metadata.producer_context matching the emitting bounded context"
+      },
+      {
+        "enforcement": "Import linter rule: cli.py may only import from build_metrics.__init__ public API, not from build_metrics.domain directly. Enforced via pylint custom checker.",
+        "rule": "CLI layer must not import domain logic directly (use service/repository facades only)"
+      },
+      {
+        "enforcement": "Code review checklist: every repository.save() must be followed by event_bus.publish(BuildRunRecorded). Enforced via integration test asserting event emission.",
+        "rule": "All persistence operations must emit domain events for observability"
+      },
+      {
+        "enforcement": "Test coverage requirement: every aggregate invariant must have a corresponding test_*_rejects_invalid_* test case. Enforced via pytest marker @pytest.mark.invariant_test.",
+        "rule": "Aggregates must validate invariants in __post_init__ (fail-fast principle)"
+      },
+      {
+        "enforcement": "Architectural documentation: StatsResult sources explicitly listed. Enforced via code review and architecture decision records (ADRs).",
+        "rule": "Read models must be derived from domain events only, never from direct database queries"
+      }
+    ],
+    "internal_event_schema": {
+      "event_name": "BuildMetricsEvent",
+      "event_version": "1.0.0",
+      "metadata_fields": [
+        {
+          "name": "event_id",
+          "type": "str (UUID4)"
+        },
+        {
+          "name": "event_type",
+          "type": "str (BuildRunRecorded | StatsComputed | StorageCorruptionDetected | StorageThresholdExceeded)"
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime (ISO8601 UTC)"
+        },
+        {
+          "name": "producer_context",
+          "type": "str (always 'build_metrics')"
+        },
+        {
+          "name": "correlation_id",
+          "type": "str | None (for tracing command execution)"
+        }
+      ],
+      "payload_fields": [
+        {
+          "name": "aggregate_id",
+          "type": "str (BuildRun.id for BuildRunRecorded)"
+        },
+        {
+          "name": "aggregate_type",
+          "type": "str (always 'BuildRun' for BuildRunRecorded)"
+        },
+        {
+          "name": "data",
+          "type": "dict (event-specific payload: BuildRun fields, StatsResult fields, or error details)"
+        }
+      ]
+    },
+    "module_contracts": [
+      {
+        "consumes": [],
+        "module": "build_metrics.domain",
+        "notes": "Zero dependencies within build_metrics. Pure domain logic with stdlib only (datetime, dataclasses).",
+        "provides": [
+          "BuildRun.__init__(id: str, start_time: datetime, end_time: datetime, exit_status: int) -> BuildRun",
+          "BuildRun.duration_seconds: float (property)",
+          "BuildRun.is_success() -> bool"
+        ]
+      },
+      {
+        "consumes": [
+          "build_metrics.domain.BuildRun"
+        ],
+        "module": "build_metrics.persistence",
+        "notes": "Emits BuildRunRecorded on save(), StorageCorruptionDetected on malformed JSONL, StorageThresholdExceeded when file >10MB. Storage contract: JSONL at ~/.buildstats/metrics.jsonl with schema {id, start_time (ISO8601), end_time (ISO8601), exit_status}.",
+        "provides": [
+          "BuildMetricsRepository.__init__(storage_path: Path | None = None) -> None",
+          "BuildMetricsRepository.save(build_run: BuildRun) -> None",
+          "BuildMetricsRepository.get_last_n(n: int) -> List[BuildRun]"
+        ]
+      },
+      {
+        "consumes": [
+          "build_metrics.domain.BuildRun",
+          "build_metrics.persistence.BuildMetricsRepository"
+        ],
+        "module": "build_metrics.service",
+        "notes": "Emits StatsComputed event after successful computation. Returns StatsResult read model (CQRS-lite projection from BuildRunRecorded events).",
+        "provides": [
+          "MetricsService.__init__(repository: BuildMetricsRepository) -> None",
+          "MetricsService.compute_stats(last_n: int) -> StatsResult",
+          "StatsResult.__init__(avg_duration_seconds: float, success_rate: float) -> StatsResult"
+        ]
+      },
+      {
+        "consumes": [
+          "build_metrics.domain.BuildRun",
+          "build_metrics.persistence.BuildMetricsRepository",
+          "build_metrics.service.MetricsService",
+          "build_metrics.service.StatsResult"
+        ],
+        "module": "cli",
+        "notes": "Anti-corruption layer translating CLI args to domain operations. Exit codes: 0=success, 1=error. JSON output to stdout for stats command.",
+        "provides": [
+          "main(argv: List[str] | None = None) -> int",
+          "_record_command(args: argparse.Namespace) -> int",
+          "_stats_command(args: argparse.Namespace) -> int"
+        ]
+      }
+    ],
+    "observability": [
+      {
+        "detail": "All domain events (BuildRunRecorded, StatsComputed, StorageCorruptionDetected, StorageThresholdExceeded) logged to structured JSON log stream with metadata (event_id, timestamp, correlation_id). Log level: INFO for business events, WARNING for operational events (corruption/threshold).",
+        "name": "Domain Event Logging"
+      },
+      {
+        "detail": "Every CLI command invocation generates a correlation_id (UUID4) passed through to domain events. Enables end-to-end tracing of: user_command -> domain_operation -> event_emission. Logged at command entry/exit with duration_ms.",
+        "name": "CLI Command Tracing"
+      },
+      {
+        "detail": "Instrument BuildMetricsRepository with: save_count (counter), get_last_n_latency_ms (histogram), file_size_bytes (gauge), malformed_lines_skipped (counter). Exposed as StatsD metrics for external monitoring (optional).",
+        "name": "Repository Operation Metrics"
+      },
+      {
+        "detail": "StorageThresholdExceeded event triggers when metrics.jsonl >10MB. StorageCorruptionDetected event emitted on malformed JSONL with line_number and error_type. Both events logged to stderr AND emitted to event bus for potential alerting.",
+        "name": "Storage Health Monitoring"
+      },
+      {
+        "detail": "Log all ValueError exceptions from BuildRun.__post_init__ with full context: rejected_values, invariant_rule, stack_trace. Log level: ERROR. Enables debugging of invalid data entry attempts.",
+        "name": "Aggregate Invariant Validation Failures"
+      },
+      {
+        "detail": "MetricsService.compute_stats() emits StatsComputed event with: sample_size (number of runs analyzed), computation_duration_ms, result_values (avg_duration, success_rate). Enables performance monitoring of analytics queries.",
+        "name": "Service Computation Telemetry"
+      }
+    ],
+    "read_models": [
+      {
+        "name": "StatsResult",
+        "purpose": "CQRS-lite projection aggregating BuildRunRecorded events into pre-computed statistics (average duration, success rate). Computed on-demand rather than materialized. Optimized for read path: O(N) computation over N BuildRun aggregates.",
+        "source_events": [
+          "BuildRunRecorded"
+        ]
+      }
+    ],
+    "vertical_slice": {
+      "bounded_context": "build_metrics",
+      "description": "End-to-end slice: User executes 'buildstats record --id=slice-001 --start-time=2026-06-26T10:00:00 --end-time=2026-06-26T10:05:00 --exit-status=0' -> CLI creates BuildRun aggregate -> Repository persists to JSONL and emits BuildRunRecorded event -> Event logged to observability stream. Then user executes 'buildstats stats --last-n=1' -> MetricsService queries repository -> Computes StatsResult read model -> Emits StatsComputed event -> Returns JSON to stdout. This slice exercises: aggregate creation with invariant validation, persistence layer save/retrieve, service layer computation, event emission at both write and read paths, and CLI integration for both commands. Success criteria: (1) metrics.jsonl contains valid JSONL entry, (2) stats command returns correct avg_duration=300.0 and success_rate=1.0, (3) both BuildRunRecorded and StatsComputed events logged with correlation_id.",
+      "domain_events": [
+        "BuildRunRecorded",
+        "StatsComputed"
+      ]
+    }
+  },
+  "prd": {
+    "acceptance_criteria": [
+      "Persistence Layer Exists: `python -c \"from buildstats.build_metrics.persistence import BuildMetricsRepository; BuildMetricsRepository()\" && echo PASS` exits 0",
+      "BuildRun Data Class: `python -c \"from buildstats.build_metrics.domain import BuildRun; import datetime; br = BuildRun(id='abc', start_time=datetime.datetime.now(), end_time=datetime.datetime.now(), exit_status=0); assert br.id == 'abc' and br.exit_status == 0\" && echo PASS` exits 0",
+      "Record Command Exists: `buildstats record --help | grep -q 'id'` exits 0",
+      "Record Persists Data: `buildstats record --id test1 --start-time 2026-06-26T10:00:00 --end-time 2026-06-26T10:05:00 --exit-status 0 && python -c \"from buildstats.build_metrics.persistence import BuildMetricsRepository; repo = BuildMetricsRepository(); runs = repo.get_last_n(1); assert len(runs) == 1 and runs[0].id == 'test1'\" && echo PASS` exits 0",
+      "Stats Query Command Exists: `buildstats stats --help | grep -q 'last-n'` exits 0",
+      "Stats Returns JSON: `buildstats stats --last-n 5 | python -c \"import sys, json; data = json.load(sys.stdin); assert 'avg_duration_seconds' in data and 'success_rate' in data\" && echo PASS` exits 0",
+      "Avg Duration Accuracy: After recording 3 runs (durations: 60s, 120s, 180s, all success), `buildstats stats --last-n 3 | python -c \"import sys, json; d=json.load(sys.stdin); assert abs(d['avg_duration_seconds'] - 120.0) < 0.01\" && echo PASS` exits 0",
+      "Success Rate Accuracy: After recording 4 runs (2 exit=0, 2 exit=1), `buildstats stats --last-n 4 | python -c \"import sys, json; d=json.load(sys.stdin); assert abs(d['success_rate'] - 0.5) < 0.01\" && echo PASS` exits 0",
+      "Empty Stats Handled: With zero persisted runs, `buildstats stats --last-n 10 | python -c \"import sys, json; d=json.load(sys.stdin); assert d['avg_duration_seconds'] == 0 and d['success_rate'] == 0\" && echo PASS` exits 0",
+      "Storage File Created: After first `buildstats record`, `test -f ~/.buildstats/metrics.jsonl && echo PASS` exits 0",
+      "Unit Tests Pass: `python -m pytest tests/build_metrics/ -v` exits 0 with all tests passing"
+    ],
+    "ask_user_form": null,
+    "assumptions": [
+      "Storage Location: `~/.buildstats/` directory is acceptable for all users; create if missing",
+      "JSONL Format: Each line is a JSON object with keys matching BuildRun field names (ISO8601 for datetimes)",
+      "Exit Status Convention: 0 = success, non-zero = failure (standard Unix convention)",
+      "No Partial Runs: All record commands provide complete data (id, start_time, end_time, exit_status)",
+      "Timestamp Format: ISO8601 strings for CLI input (e.g., `2026-06-26T10:00:00`), parsed via `datetime.fromisoformat()`",
+      "Empty Set Behavior: avg_duration and success_rate both return 0 when N=0 or no runs exist",
+      "Last N Ordering: \"Last N\" means the N most recently recorded runs (last N lines in JSONL)",
+      "Single Timezone: All timestamps assumed UTC; no timezone conversion logic required"
+    ],
+    "must_have": [
+      "Bounded Context Module: Create `src/buildstats/build_metrics/` directory with `__init__.py`, `domain.py`, `persistence.py`, `service.py`",
+      "Domain Model (domain.py): `BuildRun` dataclass with fields: `id: str`, `start_time: datetime`, `end_time: datetime`, `exit_status: int`. Include `duration_seconds` property returning `(end_time - start_time).total_seconds()`",
+      "Persistence (persistence.py): `BuildMetricsRepository` class with methods: `save(build_run: BuildRun) -> None` (append JSONL to `~/.buildstats/metrics.jsonl`) and `get_last_n(n: int) -> list[BuildRun]` (read last N lines from JSONL, deserialize to BuildRun objects)",
+      "Service Layer (service.py): `MetricsService` class with method `compute_stats(last_n: int) -> dict` returning `{\"avg_duration_seconds\": float, \"success_rate\": float}` where success_rate is proportion of runs where exit_status == 0",
+      "CLI Integration: `buildstats record` subcommand with args `--id`, `--start-time` (ISO8601), `--end-time` (ISO8601), `--exit-status` (int); wire to instantiate BuildRun and call repository.save()",
+      "CLI Integration: `buildstats stats` subcommand with arg `--last-n` (int, default=10); wire to call service.compute_stats() and print JSON to stdout",
+      "Unit Tests: Create `tests/build_metrics/` with `test_domain.py` (test BuildRun dataclass instantiation and duration_seconds property)",
+      "Unit Tests: Create `test_persistence.py` (test save/get_last_n with temp directory fixtures)",
+      "Unit Tests: Create `test_service.py` (test compute_stats with mock repository data)",
+      "Unit Tests: Create `test_cli_integration.py` (test CLI commands end-to-end with temp storage)"
+    ],
+    "nice_to_have": [
+      "Human-readable stats output (table format) when `--format table` flag is passed",
+      "`buildstats clear` command to delete all persisted metrics",
+      "Progress indicator during stats computation for > 1000 runs",
+      "Schema versioning in JSONL (e.g., `{\"_schema\": \"v1\", \"data\": {...}}`)"
+    ],
+    "out_of_scope": [
+      "Database backends (SQLite, PostgreSQL) - file-based JSONL is sufficient",
+      "Concurrency/locking - assume single CLI process at a time",
+      "Authentication or multi-user support - storage is per-system user",
+      "Build run streaming or real-time dashboard",
+      "Historical trend charts or time-series analysis",
+      "Filtering stats by date ranges or specific exit codes",
+      "Distributed metrics aggregation across multiple machines",
+      "Integration with external build systems (CI/CD webhooks, etc.)"
+    ],
+    "risks": [
+      "Large JSONL File Performance: Reading last N lines from a multi-GB file is slow. Mitigation: Document performance degradation threshold (~10k runs). Out-of-scope for v1, but log a warning if file > 10MB.",
+      "Corrupted JSONL Lines: Malformed JSON in metrics.jsonl causes deserialization failure. Mitigation: Wrap json.loads() in try/except, skip invalid lines, log warning to stderr.",
+      "Concurrent Writes: Two simultaneous `buildstats record` processes may interleave JSONL writes, corrupting data. Acceptance: Documented limitation. Future work: file locking (fcntl).",
+      "Clock Skew: end_time < start_time produces negative duration. Mitigation: Validate in BuildRun.__post_init__; raise ValueError if end_time < start_time.",
+      "Disk Full: Write to ~/.buildstats/metrics.jsonl fails if disk is full. Mitigation: Let IOError propagate to CLI; user sees error message. No retry logic."
+    ],
+    "validated_description": "Add a build-metrics bounded context to the buildstats CLI that persists build run data (id, start_time, end_time, exit_status) to disk and exposes a query interface to compute average build duration and success rate over the last N runs."
+  },
+  "rationale": "This decomposition maximizes parallelism while respecting architectural dependencies. The critical path is: domain-model \u2192 persistence-layer \u2192 service-layer \u2192 cli-integration (4 sequential levels). module-exports can run in parallel with cli-integration once its dependencies are met. end-to-end-verification is the final gate.\n\nEvery issue is shaped for Test-Driven Development: each acceptance criterion maps to a Given/When/Then behavior that becomes a failing test first (Red), then minimal implementation (Green), then refactoring (Refactor). Testing strategies explicitly sequence behaviors simplest-first (empty input \u2192 single case \u2192 multiple cases \u2192 edge cases \u2192 errors) and call out the Red\u2192Green\u2192Refactor cycle.\n\nFile isolation prevents merge conflicts: domain-model, persistence-layer, service-layer, and module-exports create new files; only cli-integration modifies an existing file (cli.py), and it's scheduled last. Tests are isolated in tests/build_metrics/ and depend on implementation modules.\n\nDDD context fields are populated per requirements: bounded_context='build_metrics' on all issues, contract_refs point to exact architecture.md sections, domain_events/read_models/guardrails/observability capture the semantic layer. cli-integration is marked as the vertical-slice (end-to-end path proving the full aggregate/service/event/read-model chain).\n\nGuidance fields shape downstream agent behavior: most issues are needs_deeper_qa=false (straightforward implementation), except cli-integration which is the complex integration point (needs_deeper_qa=true). Testing guidance is concrete and proportional. Verification commands are targeted (pytest -k domain, not the whole suite) to avoid chasing pre-existing repo failures.\n\nThe plan delivers all 11 PRD acceptance criteria with full test coverage, explicit error handling (malformed JSONL, time invariants, disk failures), and observability (stderr warnings for file size and corruption). The architecture's canonical code is referenced but NOT duplicated\u2014agents read architecture.md for implementation details. This decomposition is executable by autonomous coder agents with zero clarifying questions.",
+  "review": {
+    "approved": true,
+    "complexity_assessment": "appropriate",
+    "feedback": "Architecture revision #1 successfully addresses all previous tech lead feedback and is ready for autonomous implementation.\n\n**Requirements Coverage (11/11 AC)**:\n- AC1-AC11: Every acceptance criterion maps to a specific component with a clear implementation path. No gaps.\n- All Must-Have items from PRD are covered by the architecture.\n- Test coverage is comprehensive (domain, persistence, service, CLI integration).\n\n**Interface Precision**:\n- All type signatures are complete and precise (BuildRun, BuildMetricsRepository, MetricsService, CLI functions).\n- Error cases explicitly specified (ValueError for time validation, JSONDecodeError handling, OSError propagation).\n- Edge behaviors documented (n <= 0 returns empty list, missing file returns empty list, empty stats return zeros).\n- No ambiguity that would require autonomous agents to guess.\n\n**Internal Consistency**:\n- Data flow examples match interface definitions exactly (BuildRun construction, repository.save(), service.compute_stats()).\n- Component dependency graph matches actual import statements.\n- Error handling table matches code implementation (ValueError propagation, log-and-skip for malformed JSON, CLI exception catching).\n- StatsResult dataclass definition is consistent across all references.\n- Acceptance criteria mapping table references correct components.\n\n**Complexity Calibration**:\n- Appropriately simple: JSONL storage (not database), no premature optimization, single concrete repository class.\n- Appropriately rigorous: Proper layer separation, comprehensive error handling, file size warnings, complete type hints.\n- No over-engineering: Avoids unnecessary abstractions, caching, async, distributed concerns.\n- No under-engineering: Enables future migration paths, handles PRD risks.\n\n**Scope Alignment**:\n- Implements exactly what PRD specifies: persistence, avg duration, success rate, CLI commands, JSONL storage, unit tests.\n- Correctly excludes Nice-to-Have items (table format, clear command, progress indicator, schema versioning).\n- Correctly avoids Out-of-Scope items (databases, concurrency, multi-user, streaming, filtering).\n- Extension Points section documents future work without expanding current scope.\n\n**Revision Effectiveness**:\nAll 6 claimed fixes from previous feedback are verified:\n1. StatsResult changed from TypedDict to dataclass with proper justification (lines 293-301, 1028-1035).\n2. File size warning implemented in get_last_n() (lines 205-212).\n3. Error handling docstring corrected to match log-and-skip behavior (lines 199-200).\n4. Type hints added to CLI functions: _record_command and _stats_command (lines 451, 476).\n5. Parameter documentation clarified for n <= 0 behavior (line 192).\n6. Complete AC mapping table added (lines 1152-1164).\n\n**Minor Observations (not blocking)**:\n- The canonical code blocks are copy-paste ready, which is excellent for autonomous implementation.\n- Performance budget section provides clear degradation thresholds (20ms typical, warnings at 10MB).\n- Test specifications are unusually detailed, reducing implementation ambiguity.\n\n**Autonomous Implementation Readiness**:\nAn autonomous agent can implement this architecture without clarification questions. Every interface is canonical, every error path is specified, every performance characteristic is documented. Code should integrate on first attempt.\n\n**Recommendation**: APPROVED for implementation.",
+    "scope_issues": [],
+    "summary": "Architecture approved. All 11 acceptance criteria have clear implementation paths. Interfaces are precise with complete type signatures and error handling. No internal contradictions found. Complexity is well-calibrated - simple JSONL storage with proper layer separation. Scope exactly matches PRD with no feature creep. All previous tech lead feedback successfully addressed. Ready for autonomous agent implementation."
+  }
+}
