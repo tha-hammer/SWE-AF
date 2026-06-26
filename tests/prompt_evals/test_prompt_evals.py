@@ -36,13 +36,7 @@ _GOLDENS = ["goal_a_version_flag.json", "goal_b_build_metrics.json"]
         "product_manager",
         "architect",
         "tech_lead",
-        pytest.param(
-            "architecture_planning_loop",
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Phase 3 (SWE-AF-n5k): replace ~135-line tutorial with ~15-line checklist",
-            ),
-        ),
+        "architecture_planning_loop",  # Phase 3: tutorial distilled to a heuristic checklist
         pytest.param(
             "sprint_planner",
             marks=pytest.mark.xfail(
@@ -66,13 +60,7 @@ def test_system_prompt_within_line_budget(stem: str) -> None:
         "product_manager",
         "architect",
         "tech_lead",
-        pytest.param(
-            "architecture_planning_loop",
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Phase 3 (SWE-AF-n5k): remove leaked 'Exploded View' domain example",
-            ),
-        ),
+        "architecture_planning_loop",  # Phase 3: leaked 'Exploded View' domain example removed
         "sprint_planner",
         "issue_writer",
     ],
