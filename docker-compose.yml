@@ -43,6 +43,8 @@ services:
       - DATABASE_URL_TEST=${DATABASE_URL_TEST:-postgres://cosmichr_user:password@build-db:5432/cosmichr_buildtest}
     ports:
       - "8003:8003"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - workspaces:/workspaces
       - ${HOME}/.codex:/root/.codex
@@ -82,13 +84,19 @@ services:
       - SWE_DEFAULT_RUNTIME=${SWE_DEFAULT_RUNTIME:-claude_code}
       - SWE_DEFAULT_MODEL=${SWE_DEFAULT_MODEL:-}
       - SWE_CODEX_AUTH_MODE=${SWE_CODEX_AUTH_MODE:-auto}
+      - DATABASE_URL_TEST=${DATABASE_URL_TEST:-postgres://cosmichr_user:password@build-db:5432/cosmichr_buildtest}
     ports:
       - "8004:8004"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - workspaces:/workspaces
       - ${HOME}/.codex:/root/.codex
     depends_on:
-      - control-plane
+      control-plane:
+        condition: service_started
+      build-db:
+        condition: service_healthy
 
   # Generic throwaway Postgres for build-time DB-dependent checks (migrations, RLS,
   # integration tests). Ephemeral by design — data lives in the container layer and

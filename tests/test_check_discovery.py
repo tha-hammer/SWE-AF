@@ -9,6 +9,8 @@ import pytest
 
 from swe_af.execution.deterministic_check import (
     ResolvedCheck,
+    check_requires_test_db,
+    command_supplies_test_db,
     detect_project_commands,
     resolve_issue_commands,
 )
@@ -156,3 +158,11 @@ def test_resolution_is_pure_idempotent(tmp_path):
     root = _write(tmp_path, "pyproject.toml", "[project]\nname='x'\n")
     issue = _issue(verification=[{"description": "d", "command": "pytest -q", "kind": "test"}])
     assert resolve_issue_commands(issue, root) == resolve_issue_commands(issue, root)
+
+
+def test_planned_check_declares_database_requirement():
+    assert check_requires_test_db("REQUIRE_TEST_DB=1 npm run test:integration")
+    assert check_requires_test_db("DATABASE_URL_TEST=postgres://x npm test")
+    assert command_supplies_test_db("DATABASE_URL_TEST=postgres://x npm test")
+    assert not command_supplies_test_db("REQUIRE_TEST_DB=1 npm test")
+    assert not check_requires_test_db("npm test")

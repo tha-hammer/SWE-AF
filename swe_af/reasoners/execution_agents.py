@@ -21,6 +21,7 @@ from swe_af.execution.schemas import (
     CIWatchResult,
     CodeReviewResult,
     CoderResult,
+    FixGeneratorResult,
     GitHubPRResult,
     GitInitResult,
     IntegrationTestResult,
@@ -1241,6 +1242,7 @@ async def run_code_reviewer(
     )
 
     provider = runtime_to_harness_adapter(ai_provider)
+    error_text = ""
 
     try:
         result = await router.harness(
@@ -1268,6 +1270,7 @@ async def run_code_reviewer(
     except FatalHarnessError:
         raise  # Non-retryable — propagate immediately
     except Exception as e:
+        error_text = str(e)
         router.note(
             f"Code reviewer agent failed: {issue_name}: {e}",
             tags=["code_reviewer", "error"],
@@ -1279,7 +1282,10 @@ async def run_code_reviewer(
     # failure then exhausts to an honest FAILED rather than COMPLETED.
     return CodeReviewResult(
         approved=False,
-        summary=f"Code reviewer agent errored for {issue_name} (no verdict) — requesting fix: {e}",
+        summary=(
+            f"Code reviewer agent errored for {issue_name} (no verdict) — "
+            f"requesting fix: {error_text or 'unknown error'}"
+        ),
         blocking=False,
         iteration_id=iteration_id,
     ).model_dump()
@@ -1322,13 +1328,29 @@ async def run_qa_synthesizer(
         workspace_manifest=ws_manifest,
     )
 
+    provider = runtime_to_harness_adapter(ai_provider)
+
     try:
-        result = await router.ai(
-            task_prompt,
-            system=QA_SYNTHESIZER_SYSTEM_PROMPT,
-            schema=QASynthesisResult,
-            model=model,
-        )
+        if provider == "codex":
+            result = await router.harness(
+                task_prompt,
+                system_prompt=QA_SYNTHESIZER_SYSTEM_PROMPT,
+                schema=QASynthesisResult,
+                model=model,
+                provider=provider,
+                cwd=worktree_path or artifacts_dir or ".",
+                max_turns=DEFAULT_AGENT_MAX_TURNS,
+                permission_mode=permission_mode or None,
+                tools=[],
+            )
+            check_fatal_harness_error(result)
+        else:
+            result = await router.ai(
+                task_prompt,
+                system=QA_SYNTHESIZER_SYSTEM_PROMPT,
+                schema=QASynthesisResult,
+                model=model,
+            )
         if result.parsed is not None:
             router.note(
                 f"QA synthesizer complete: action={result.parsed.action.value}, "
@@ -1424,18 +1446,13 @@ async def generate_fix_issues(
                 f"- **{repo.repo_name}** (role: {repo.role}): `{repo.absolute_path}`\n"
             )
 
-    class FixGeneratorOutput(BaseModel):
-        fix_issues: list[dict] = []
-        debt_items: list[dict] = []
-        summary: str = ""
-
     provider = runtime_to_harness_adapter(ai_provider)
 
     try:
         result = await router.harness(
             task_prompt,
             system_prompt=FIX_GENERATOR_SYSTEM_PROMPT,
-            schema=FixGeneratorOutput,
+            schema=FixGeneratorResult,
             model=model,
             provider=provider,
             tools=["Read", "Write", "Glob", "Grep", "Bash"],

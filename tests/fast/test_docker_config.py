@@ -13,6 +13,11 @@ def load_docker_compose():
         return yaml.safe_load(f)
 
 
+def load_docker_compose_local():
+    with open(REPO_ROOT / "docker-compose.local.yml") as f:
+        return yaml.safe_load(f)
+
+
 def load_pyproject():
     with open(REPO_ROOT / "pyproject.toml", "rb") as f:
         return tomllib.load(f)
@@ -20,6 +25,10 @@ def load_pyproject():
 
 def _service_environment(service_name: str) -> list[str]:
     compose = load_docker_compose()
+    return compose["services"][service_name]["environment"]
+
+
+def _service_environment_from(compose: dict, service_name: str) -> list[str]:
     return compose["services"][service_name]["environment"]
 
 
@@ -101,6 +110,43 @@ def test_default_runtime_env_in_swe_agent_and_swe_fast():
     expected = "SWE_DEFAULT_RUNTIME=${SWE_DEFAULT_RUNTIME:-claude_code}"
     assert expected in _service_environment("swe-agent")
     assert expected in _service_environment("swe-fast")
+
+
+def test_database_url_test_env_in_build_nodes():
+    expected = (
+        "DATABASE_URL_TEST=${DATABASE_URL_TEST:-"
+        "postgres://cosmichr_user:password@build-db:5432/cosmichr_buildtest}"
+    )
+    assert expected in _service_environment("swe-agent")
+    assert expected in _service_environment("swe-fast")
+
+
+def test_host_gateway_available_for_db_backed_checks():
+    compose = load_docker_compose()
+    for service in ("swe-agent", "swe-fast"):
+        assert "host.docker.internal:host-gateway" in (
+            compose["services"][service].get("extra_hosts", [])
+        )
+
+
+def test_build_nodes_wait_for_build_db_when_using_default_url():
+    compose = load_docker_compose()
+    for service in ("swe-agent", "swe-fast"):
+        depends_on = compose["services"][service].get("depends_on", {})
+        assert "build-db" in depends_on
+
+
+def test_local_compose_swe_agent_receives_build_db_contract():
+    compose = load_docker_compose_local()
+    expected = (
+        "DATABASE_URL_TEST=${DATABASE_URL_TEST:-"
+        "postgres://cosmichr_user:password@build-db:5432/cosmichr_buildtest}"
+    )
+    assert expected in _service_environment_from(compose, "swe-agent")
+    assert "host.docker.internal:host-gateway" in (
+        compose["services"]["swe-agent"].get("extra_hosts", [])
+    )
+    assert "build-db" in compose["services"]["swe-agent"].get("depends_on", {})
 
 
 def test_pyproject_swe_fast_script():

@@ -1914,7 +1914,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agentfield", specifier = ">=0.1.82" },
-    { name = "baml-py", specifier = "==0.222.0" },
+    { name = "baml-py" },
     { name = "claude-agent-sdk", specifier = "==0.1.20" },
     { name = "hax-sdk", specifier = ">=0.2.4" },
     { name = "pydantic", specifier = ">=2.0" },

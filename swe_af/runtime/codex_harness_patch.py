@@ -5,6 +5,8 @@ import contextvars
 import json
 import os
 import re
+import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +38,25 @@ baml_output_format_enabled: contextvars.ContextVar[bool] = contextvars.ContextVa
 # codex calls get the Codex-native structured-output instruction.
 active_provider: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "swe_af_codex_active_provider", default=None
+)
+
+
+@dataclass(frozen=True)
+class CodexInvocationPaths:
+    schema_path: str
+    output_path: str
+
+
+@dataclass(frozen=True)
+class CodexCLIResult:
+    stdout: str
+    stderr: str
+    returncode: int
+    timed_out: bool = False
+
+
+_codex_invocation_paths: contextvars.ContextVar[CodexInvocationPaths | None] = (
+    contextvars.ContextVar("swe_af_codex_invocation_paths", default=None)
 )
 
 _ORIGINAL_BUILD_PROMPT_SUFFIX: Any = None
@@ -172,7 +193,48 @@ def _codex_strict_json_schema(schema: dict[str, Any]) -> dict[str, Any]:
             key: _codex_strict_json_schema(value) if isinstance(value, dict) else value
             for key, value in definitions.items()
         }
+    _close_open_additional_properties(strict)
     return strict
+
+
+def _close_open_additional_properties(value: Any) -> None:
+    if isinstance(value, dict):
+        if value.get("type") == "object" and value.get("additionalProperties") is True:
+            value["additionalProperties"] = False
+        for child in value.values():
+            _close_open_additional_properties(child)
+    elif isinstance(value, list):
+        for child in value:
+            _close_open_additional_properties(child)
+
+
+def _begin_codex_invocation_paths(cwd: str) -> contextvars.Token[CodexInvocationPaths | None]:
+    token = uuid.uuid4().hex[:12]
+    root = Path(cwd)
+    return _codex_invocation_paths.set(
+        CodexInvocationPaths(
+            schema_path=str(root / f".agentfield_schema.{token}.json"),
+            output_path=str(root / f".agentfield_output.{token}.json"),
+        )
+    )
+
+
+def _current_codex_invocation_paths() -> CodexInvocationPaths | None:
+    return _codex_invocation_paths.get()
+
+
+def _reset_codex_invocation_paths(
+    token: contextvars.Token[CodexInvocationPaths | None],
+) -> None:
+    _codex_invocation_paths.reset(token)
+
+
+def _write_schema_json(path: str, schema_json: str) -> str:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as file_obj:
+        file_obj.write(schema_json)
+    return path
 
 
 def _augment_codex_error_message(message: str, detail: str) -> str:
@@ -191,13 +253,83 @@ def _augment_codex_error_message(message: str, detail: str) -> str:
     return message
 
 
-async def _run_codex_cli_with_stdin(
+_CODEX_STDIN_BANNERS = (
+    "Reading prompt from stdin...",
+)
+
+
+def _is_codex_banner(text: str) -> bool:
+    stripped = text.strip()
+    return bool(stripped) and any(stripped == banner for banner in _CODEX_STDIN_BANNERS)
+
+
+def _stringify_error_value(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (dict, list)):
+        try:
+            return json.dumps(value, sort_keys=True)
+        except TypeError:
+            return str(value)
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _collect_error_candidates(value: Any) -> list[str]:
+    candidates: list[str] = []
+    if isinstance(value, dict):
+        for key in ("error", "message", "msg", "details", "detail", "reason"):
+            if key in value:
+                text = _stringify_error_value(value[key])
+                if text:
+                    candidates.append(text)
+                candidates.extend(_collect_error_candidates(value[key]))
+        for child in value.values():
+            if isinstance(child, (dict, list)):
+                candidates.extend(_collect_error_candidates(child))
+    elif isinstance(value, list):
+        for child in value:
+            candidates.extend(_collect_error_candidates(child))
+    return candidates
+
+
+def _codex_error_detail(stderr: str, records: list[dict[str, Any]], stdout: str) -> str:
+    seen: set[str] = set()
+    candidates: list[str] = []
+    for record in records if isinstance(records, list) else []:
+        for candidate in _collect_error_candidates(record):
+            if not candidate or _is_codex_banner(candidate) or candidate in seen:
+                continue
+            seen.add(candidate)
+            candidates.append(candidate)
+
+    if candidates:
+        return "\n".join(candidates[:5])
+
+    stderr_clean = (stderr or "").strip()
+    stderr_lines = [
+        line.strip()
+        for line in stderr_clean.splitlines()
+        if line.strip() and not _is_codex_banner(line)
+    ]
+    if stderr_lines:
+        return "\n".join(stderr_lines)
+
+    stdout_clean = (stdout or "").strip()
+    if stdout_clean and not records:
+        return _trim_output(stdout_clean)
+    return stderr_clean
+
+
+async def _run_codex_cli_with_timeout(
     cmd: list[str],
     prompt_for_codex: str,
     *,
     env: dict[str, str] | None,
     cwd: str | None,
-) -> tuple[str, str, int]:
+    timeout_seconds: float | None,
+) -> CodexCLIResult:
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdin=asyncio.subprocess.PIPE,
@@ -206,10 +338,50 @@ async def _run_codex_cli_with_stdin(
         env=env,
         cwd=cwd,
     )
-    stdout_bytes, stderr_bytes = await proc.communicate(prompt_for_codex.encode("utf-8"))
+    try:
+        communicate = proc.communicate(prompt_for_codex.encode("utf-8"))
+        if timeout_seconds is not None and timeout_seconds > 0:
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                communicate, timeout=float(timeout_seconds)
+            )
+        else:
+            stdout_bytes, stderr_bytes = await communicate
+    except asyncio.TimeoutError:
+        if proc.returncode is None:
+            try:
+                proc.kill()
+            except ProcessLookupError:
+                pass
+        try:
+            await proc.wait()
+        except ProcessLookupError:
+            pass
+        return CodexCLIResult(stdout="", stderr="", returncode=-1, timed_out=True)
+
     stdout = stdout_bytes.decode("utf-8", errors="replace")
     stderr = stderr_bytes.decode("utf-8", errors="replace")
-    return stdout, stderr, int(proc.returncode)
+    return CodexCLIResult(
+        stdout=stdout,
+        stderr=stderr,
+        returncode=int(proc.returncode if proc.returncode is not None else 0),
+    )
+
+
+async def _run_codex_cli_with_stdin(
+    cmd: list[str],
+    prompt_for_codex: str,
+    *,
+    env: dict[str, str] | None,
+    cwd: str | None,
+) -> tuple[str, str, int]:
+    result = await _run_codex_cli_with_timeout(
+        cmd,
+        prompt_for_codex,
+        env=env,
+        cwd=cwd,
+        timeout_seconds=None,
+    )
+    return result.stdout, result.stderr, result.returncode
 
 
 def apply_codex_harness_patch() -> None:
@@ -251,8 +423,11 @@ def apply_codex_harness_patch() -> None:
             _codex_strict_json_schema(_schema.schema_to_json_schema(schema)),
             indent=2,
         )
-        _schema.write_schema_file(schema_json, cwd)
-        schema_path = _schema.get_schema_path(cwd)
+        paths = _current_codex_invocation_paths()
+        if paths is not None:
+            schema_path = _write_schema_json(paths.schema_path, schema_json)
+        else:
+            schema_path = _schema.write_schema_file(schema_json, cwd)
         return (
             "\n\n---\n"
             "CRITICAL CODEX STRUCTURED OUTPUT REQUIREMENTS:\n"
@@ -292,8 +467,9 @@ def apply_codex_harness_patch() -> None:
 
         prompt_for_codex = prompt
         if cwd:
-            schema_path = _schema.get_schema_path(cwd)
-            output_path = _schema.get_output_path(cwd)
+            paths = _current_codex_invocation_paths()
+            schema_path = paths.schema_path if paths is not None else _schema.get_schema_path(cwd)
+            output_path = paths.output_path if paths is not None else _schema.get_output_path(cwd)
             if Path(schema_path).exists():
                 cmd.extend(["--output-schema", schema_path])
                 cmd.extend(["--output-last-message", output_path])
@@ -309,15 +485,18 @@ def apply_codex_harness_patch() -> None:
         try:
             start = asyncio.get_running_loop().time()
             timeout_seconds = options.get("timeout_seconds")
-            if isinstance(timeout_seconds, (int, float)) and timeout_seconds > 0:
-                stdout, stderr, returncode = await asyncio.wait_for(
-                    _run_codex_cli_with_stdin(cmd, prompt_for_codex, env=merged_env, cwd=cwd),
-                    timeout=float(timeout_seconds),
-                )
-            else:
-                stdout, stderr, returncode = await _run_codex_cli_with_stdin(
-                    cmd, prompt_for_codex, env=merged_env, cwd=cwd
-                )
+            timeout_value = (
+                float(timeout_seconds)
+                if isinstance(timeout_seconds, (int, float)) and timeout_seconds > 0
+                else None
+            )
+            cli_result = await _run_codex_cli_with_timeout(
+                cmd,
+                prompt_for_codex,
+                env=merged_env,
+                cwd=cwd,
+                timeout_seconds=timeout_value,
+            )
             duration_ms = int((asyncio.get_running_loop().time() - start) * 1000)
         except FileNotFoundError as exc:
             return RawResult(
@@ -334,7 +513,8 @@ def apply_codex_harness_patch() -> None:
                 failure_type=FailureType.CRASH,
                 returncode=-1,
             )
-        except asyncio.TimeoutError:
+
+        if cli_result.timed_out:
             return RawResult(
                 result="",
                 messages=[],
@@ -350,12 +530,16 @@ def apply_codex_harness_patch() -> None:
                 returncode=-1,
             )
 
+        stdout = cli_result.stdout
+        stderr = cli_result.stderr
+        returncode = cli_result.returncode
         stderr_clean = strip_ansi(stderr or "")
         records = parse_jsonl(stdout or "")
         result_text = extract_final_text(records) or ""
 
         if not result_text and cwd:
-            output_path = _schema.get_output_path(cwd)
+            paths = _current_codex_invocation_paths()
+            output_path = paths.output_path if paths is not None else _schema.get_output_path(cwd)
             output_file = Path(output_path)
             if output_file.exists():
                 try:
@@ -367,8 +551,12 @@ def apply_codex_harness_patch() -> None:
         error_message = ""
         failure_type = FailureType.NONE
         if is_error:
-            base_error = stderr_clean or "Codex CLI failed"
-            error_message = _augment_codex_error_message(base_error, base_error)
+            detail = _codex_error_detail(stderr_clean, records, stdout)
+            base_error = detail or stderr_clean or "Codex CLI failed"
+            error_message = _augment_codex_error_message(
+                base_error,
+                f"{stderr_clean}\n{detail}",
+            )
             failure_type = FailureType.CRASH
 
         return RawResult(
@@ -452,10 +640,16 @@ def apply_codex_harness_patch() -> None:
         self: Any, prompt: str, *args: Any, **kwargs: Any
     ) -> Any:
         provider_value = kwargs.get("provider")
+        cwd_value = kwargs.get("cwd")
         token = active_provider.set(str(provider_value) if provider_value else None)
+        path_token = None
+        if provider_value == "codex" and isinstance(cwd_value, str):
+            path_token = _begin_codex_invocation_paths(cwd_value)
         try:
             return await _orig_agent_harness(self, prompt, *args, **kwargs)
         finally:
+            if path_token is not None:
+                _reset_codex_invocation_paths(path_token)
             active_provider.reset(token)
 
     _orig_claude_connect = SubprocessCLITransport.connect

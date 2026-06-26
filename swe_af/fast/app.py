@@ -16,10 +16,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agentfield import Agent
-from swe_af.execution.envelope import unwrap_call_result as _unwrap
-from swe_af.fast import fast_router
-from swe_af.fast.schemas import FastBuildConfig, FastBuildResult, fast_resolve_models
+from agentfield import Agent  # noqa: E402
+from swe_af.execution.envelope import unwrap_call_result as _unwrap  # noqa: E402
+from swe_af.fast import fast_router  # noqa: E402
+from swe_af.fast.schemas import FastBuildConfig, FastBuildResult, fast_resolve_models  # noqa: E402
+from swe_af.runtime.providers import runtime_to_harness_provider  # noqa: E402
 
 NODE_ID = os.getenv("NODE_ID", "swe-fast")
 
@@ -48,11 +49,7 @@ def _repo_name_from_url(url: str) -> str:
 
 def _runtime_to_provider(runtime: str) -> str:
     """Map runtime string to ai_provider string, preserving legacy fast fallback."""
-    if runtime == "claude_code":
-        return "claude"
-    if runtime == "codex":
-        return "codex"
-    return "opencode"
+    return runtime_to_harness_provider(runtime)
 
 
 @app.reasoner()

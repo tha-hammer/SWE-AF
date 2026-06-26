@@ -15,7 +15,11 @@ import subprocess
 
 import pytest
 
-from swe_af.execution.coding_loop import _load_iteration_state, run_coding_loop
+from swe_af.execution.coding_loop import (
+    _load_iteration_state,
+    _save_iteration_state,
+    run_coding_loop,
+)
 from swe_af.execution.schemas import (
     BuildConfig,
     DAGState,
@@ -250,3 +254,109 @@ def test_config_propagation_build_to_execution():
     # ExecutionConfig has extra="forbid": these keys must be accepted, and the flag
     # must propagate (an omitted dict line would silently default to True).
     assert ExecutionConfig(**d).enable_deterministic_checks is False
+
+
+def test_db_precondition_missing_fails_before_coder(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATABASE_URL_TEST", raising=False)
+    call_fn = _RecordingCallFn(reviewer_approve=True)
+    runner = _SpyRunner([_completed(returncode=0)])
+    config = ExecutionConfig(max_coding_iterations=5, agent_timeout_seconds=30)
+    issue = _issue(
+        verification=_planned("REQUIRE_TEST_DB=1 npm run test:integration")
+    )
+
+    result = _run(run_coding_loop(
+        issue,
+        _dag_state(str(tmp_path)),
+        call_fn,
+        "node",
+        config,
+        local_runner=runner,
+    ))
+
+    assert result.outcome == IssueOutcome.FAILED_UNRECOVERABLE
+    assert "DATABASE_URL_TEST" in result.error_message
+    assert call_fn.labels == []
+    assert runner.calls == []
+
+
+def test_db_precondition_env_runs_existing_gate(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL_TEST", "postgres://x")
+    call_fn = _RecordingCallFn(reviewer_approve=True)
+    runner = _SpyRunner([_completed(returncode=0)])
+    config = ExecutionConfig(max_coding_iterations=1, agent_timeout_seconds=30)
+    issue = _issue(
+        verification=_planned("REQUIRE_TEST_DB=1 npm run test:integration")
+    )
+
+    result = _run(run_coding_loop(
+        issue,
+        _dag_state(str(tmp_path)),
+        call_fn,
+        "node",
+        config,
+        local_runner=runner,
+    ))
+
+    assert result.outcome == IssueOutcome.COMPLETED
+    assert runner.calls
+    assert call_fn.reviewer_called()
+
+
+def test_db_precondition_inline_url_runs_existing_gate(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATABASE_URL_TEST", raising=False)
+    call_fn = _RecordingCallFn(reviewer_approve=True)
+    runner = _SpyRunner([_completed(returncode=0)])
+    config = ExecutionConfig(max_coding_iterations=1, agent_timeout_seconds=30)
+    issue = _issue(
+        verification=_planned("DATABASE_URL_TEST=postgres://x npm test")
+    )
+
+    result = _run(run_coding_loop(
+        issue,
+        _dag_state(str(tmp_path)),
+        call_fn,
+        "node",
+        config,
+        local_runner=runner,
+    ))
+
+    assert result.outcome == IssueOutcome.COMPLETED
+    assert runner.calls
+
+
+def test_db_precondition_missing_fails_before_resumed_coder(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATABASE_URL_TEST", raising=False)
+    dag = _dag_state(str(tmp_path))
+    _save_iteration_state(
+        str(tmp_path),
+        "ISSUE-1",
+        {
+            "iteration": 1,
+            "feedback": "previous failure",
+            "files_changed": [],
+            "iteration_history": [],
+            "det_check_attempts": 0,
+        },
+        build_id=dag.build_id,
+    )
+    call_fn = _RecordingCallFn(reviewer_approve=True)
+    runner = _SpyRunner([_completed(returncode=0)])
+    config = ExecutionConfig(max_coding_iterations=5, agent_timeout_seconds=30)
+    issue = _issue(
+        verification=_planned("REQUIRE_TEST_DB=1 npm run test:integration")
+    )
+
+    result = _run(run_coding_loop(
+        issue,
+        dag,
+        call_fn,
+        "node",
+        config,
+        local_runner=runner,
+    ))
+
+    assert result.outcome == IssueOutcome.FAILED_UNRECOVERABLE
+    assert "DATABASE_URL_TEST" in result.error_message
+    assert call_fn.labels == []
+    assert runner.calls == []

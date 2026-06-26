@@ -54,3 +54,5 @@
 # - github.repo
 
 sync.remote: "git+https://github.com/tha-hammer/SWE-AF.git"
+
+federation.remote: "git+https://github.com/tha-hammer/SWE-AF.git"

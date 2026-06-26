@@ -420,17 +420,71 @@ class VerificationResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class AgentRetro(BaseModel):
+    """Structured coder retrospective stored in shared memory."""
+
+    worked_well: list[str] = Field(default_factory=list)
+    got_stuck_on: list[str] = Field(default_factory=list)
+    tips_for_next_time: list[str] = Field(default_factory=list)
+
+
+class TestFailure(BaseModel):
+    """One QA-discovered test failure."""
+
+    test_name: str = ""
+    file: str = ""
+    error: str = ""
+    expected: str = ""
+    actual: str = ""
+
+
+class DebtItem(BaseModel):
+    """One non-blocking or blocking code-review debt item."""
+
+    severity: str = ""
+    title: str = ""
+    file_path: str = ""
+    description: str = ""
+
+
+class FixIssueDraft(BaseModel):
+    """One fix issue generated from failed final verification criteria."""
+
+    name: str = ""
+    title: str = ""
+    description: str = ""
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    files_to_modify: list[str] = Field(default_factory=list)
+    target_repo: str = ""
+
+
+class FixDebtItem(BaseModel):
+    """One verification criterion accepted as debt by the fix generator."""
+
+    criterion: str = ""
+    reason: str = ""
+    severity: str = "high"
+
+
+class FixGeneratorResult(BaseModel):
+    """Structured output from verification fix-issue generation."""
+
+    fix_issues: list[FixIssueDraft] = Field(default_factory=list)
+    debt_items: list[FixDebtItem] = Field(default_factory=list)
+    summary: str = ""
+
+
 class CoderResult(BaseModel):
     """Output from the coder agent."""
 
-    files_changed: list[str] = []
+    files_changed: list[str] = Field(default_factory=list)
     summary: str = ""
     complete: bool = True
     iteration_id: str = ""
     tests_passed: bool | None = None  # Self-reported: did tests pass?
     test_summary: str = ""  # Brief test run output
-    codebase_learnings: list[str] = []  # Conventions discovered (for shared memory)
-    agent_retro: dict = {}  # What worked, what didn't (for shared memory)
+    codebase_learnings: list[str] = Field(default_factory=list)  # Conventions discovered
+    agent_retro: AgentRetro = Field(default_factory=AgentRetro)
     repo_name: str = ""  # Repo where coder ran (multi-repo)
 
 
@@ -439,8 +493,8 @@ class QAResult(BaseModel):
 
     passed: bool
     summary: str = ""
-    test_failures: list[dict] = []  # [{test_name, file, error, expected, actual}]
-    coverage_gaps: list[str] = []  # ACs without test coverage
+    test_failures: list[TestFailure] = Field(default_factory=list)
+    coverage_gaps: list[str] = Field(default_factory=list)  # ACs without test coverage
     iteration_id: str = ""
 
 
@@ -450,7 +504,7 @@ class CodeReviewResult(BaseModel):
     approved: bool
     summary: str = ""
     blocking: bool = False  # True ONLY for security/crash/data-loss
-    debt_items: list[dict[str, Any]] = []  # [{severity, title, file_path, description}]
+    debt_items: list[DebtItem] = Field(default_factory=list)
     iteration_id: str = ""
 
 

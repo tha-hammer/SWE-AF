@@ -200,6 +200,11 @@ DATABASE_URL_TEST=postgres://cosmichr_user:password@build-db:5432/cosmichr_build
   DB (cosmic-HR's `tests/integration/global-setup.js` runs `migrate.js` + truncates), so
   the factory doesn't need to know the schema. Override `BUILD_DB_USER/PASSWORD/NAME` and
   `DATABASE_URL_TEST` in `.env` for a target that expects different creds.
+- SWE-AF does **not** know target-project schemas, production credentials, or external
+  Docker network names. Keep `DATABASE_URL_TEST` pointed at a throwaway test database.
+- For a test DB in another compose project, either expose that DB on the host and use
+  `host.docker.internal` from the build node, or explicitly attach the build node to the
+  external Docker network.
 - **Ephemeral by design** — data is in the container layer, wiped on recreate.
 - **One shared DB across nodes** → run DB-dependent builds **one at a time** (concurrent
   `global-setup`s would truncate each other). Per-build DBs are a future enhancement.

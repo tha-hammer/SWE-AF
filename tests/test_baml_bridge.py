@@ -15,11 +15,15 @@ from baml_client.sync_client import b
 from baml_client.type_builder import TypeBuilder
 from swe_af.baml_bridge import baml_parse, deserialize, pydantic_to_typebuilder
 from swe_af.execution.schemas import (
+    AgentRetro,
+    CodeReviewResult,
     CoderResult,
     CriterionResult,
+    DebtItem,
     MergeResult,
     QAResult,
     RetryAdvice,
+    TestFailure as QATestFailure,
     VerificationResult,
 )
 
@@ -144,6 +148,49 @@ def test_coder_result_roundtrips_with_dict_field_at_default():
 def test_qa_result_roundtrips_with_dict_field_at_default():
     inst = QAResult(passed=True, summary="green", iteration_id="i1")
     assert _roundtrip(QAResult, inst.model_dump()) == inst  # test_failures back at []
+
+
+def test_coder_result_roundtrips_with_agent_retro_content():
+    inst = CoderResult(
+        files_changed=["x.py"],
+        summary="did",
+        agent_retro=AgentRetro(
+            worked_well=["small tests"],
+            got_stuck_on=["schema"],
+            tips_for_next_time=["check output schema first"],
+        ),
+    )
+
+    assert _roundtrip(CoderResult, inst.model_dump()) == inst
+
+
+def test_qa_and_review_nested_items_roundtrip_non_default_content():
+    qa = QAResult(
+        passed=False,
+        test_failures=[
+            QATestFailure(
+                test_name="test_x",
+                file="tests/test_x.py",
+                error="boom",
+                expected="green",
+                actual="red",
+            )
+        ],
+    )
+    review = CodeReviewResult(
+        approved=False,
+        debt_items=[
+            DebtItem(
+                severity="should_fix",
+                title="Missing edge case",
+                file_path="x.py",
+                description="Cover empty input",
+            )
+        ],
+    )
+
+    assert _roundtrip(QAResult, qa.model_dump()) == qa
+    assert _roundtrip(CodeReviewResult, review.model_dump()) == review
 
 
 def test_required_bare_dict_field_still_raises():

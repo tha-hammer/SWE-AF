@@ -22,7 +22,11 @@ import uuid
 from typing import Callable
 
 
-from swe_af.execution.deterministic_check import LocalRunner, _run_deterministic_gate
+from swe_af.execution.deterministic_check import (
+    LocalRunner,
+    _run_deterministic_gate,
+    deterministic_preflight,
+)
 from swe_af.execution.fatal_error import FatalHarnessError
 from swe_af.execution.schemas import (
     DAGState,
@@ -429,6 +433,10 @@ async def _run_flagged_path(
             qa_coro, review_coro, return_exceptions=True,
         )
 
+        for result in (qa_result, review_result):
+            if isinstance(result, FatalHarnessError):
+                raise result
+
         if isinstance(qa_result, Exception):
             if note_fn:
                 note_fn(
@@ -604,6 +612,24 @@ async def run_coding_loop(
             note_fn(
                 f"Resuming {issue_name} from iteration {start_iteration}",
                 tags=["coding_loop", "resume", issue_name],
+            )
+
+    if config.enable_deterministic_checks:
+        preflight_error = deterministic_preflight(issue, worktree_path, os.environ)
+        if preflight_error:
+            if note_fn:
+                note_fn(
+                    f"Deterministic preflight failed: {issue_name}: {preflight_error}",
+                    tags=["coding_loop", "deterministic_preflight", "error", issue_name],
+                )
+            return IssueResult(
+                issue_name=issue_name,
+                outcome=IssueOutcome.FAILED_UNRECOVERABLE,
+                error_message=preflight_error,
+                files_changed=files_changed,
+                branch_name=branch_name,
+                attempts=max(0, start_iteration - 1),
+                iteration_history=iteration_history,
             )
 
     for iteration in range(start_iteration, max_iterations + 1):

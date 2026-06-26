@@ -11,8 +11,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import subprocess
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 from swe_af.execution._proc import _tail
@@ -30,6 +31,7 @@ LocalRunner = Callable[[Sequence[str], str], "subprocess.CompletedProcess[str]"]
 # (optionally with prerequisites). Anchored at line start so "pytest:" / "test_x:"
 # do not match.
 _MAKE_TEST_TARGET = re.compile(r"^test\s*:")
+_SHELL_ASSIGNMENT = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)=(.*)$")
 
 
 def _read_text(path: str) -> str:
@@ -136,6 +138,64 @@ def resolve_issue_commands(issue: dict, worktree_path: str) -> list[ResolvedChec
         for kind in ("test", "build")
         if commands.get(kind)
     ]
+
+
+def _split_shell_tokens(command: str) -> list[str]:
+    try:
+        return shlex.split(command, posix=True)
+    except ValueError:
+        return command.split()
+
+
+def _leading_env_assignments(command: str) -> dict[str, str]:
+    tokens = _split_shell_tokens(command)
+    if tokens and tokens[0] == "env":
+        tokens = tokens[1:]
+
+    assignments: dict[str, str] = {}
+    for token in tokens:
+        match = _SHELL_ASSIGNMENT.match(token)
+        if match is None:
+            break
+        assignments[match.group(1)] = match.group(2)
+    return assignments
+
+
+def command_supplies_test_db(command: str) -> bool:
+    """Return True when *command* assigns DATABASE_URL_TEST inline."""
+    return bool(_leading_env_assignments(command).get("DATABASE_URL_TEST"))
+
+
+def check_requires_test_db(command: str) -> bool:
+    """Return True for commands that explicitly declare test-DB dependency."""
+    assignments = _leading_env_assignments(command)
+    if assignments.get("REQUIRE_TEST_DB") == "1":
+        return True
+    if "DATABASE_URL_TEST" in command:
+        return True
+    return False
+
+
+def deterministic_preflight(
+    issue: dict,
+    worktree_path: str,
+    env: Mapping[str, str],
+) -> str | None:
+    """Return an environment precondition error for unrunnable DB-backed checks."""
+    for check in resolve_issue_commands(issue, worktree_path):
+        if (
+            check_requires_test_db(check.command)
+            and not command_supplies_test_db(check.command)
+            and not env.get("DATABASE_URL_TEST")
+        ):
+            return (
+                "Build-node environment precondition failed: deterministic check "
+                "requires DATABASE_URL_TEST, but the build environment does not "
+                "provide it. Set DATABASE_URL_TEST to a throwaway test database "
+                "or provide it inline in the check command. "
+                f"Command: `{check.command}`"
+            )
+    return None
 
 
 @dataclass(frozen=True)

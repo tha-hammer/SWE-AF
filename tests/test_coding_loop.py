@@ -16,7 +16,14 @@ import shutil
 import tempfile
 import unittest
 
-from swe_af.execution.coding_loop import _detect_stuck_loop, run_coding_loop
+import pytest
+
+from swe_af.execution.coding_loop import (
+    _detect_stuck_loop,
+    _run_flagged_path,
+    run_coding_loop,
+)
+from swe_af.execution.fatal_error import FatalHarnessError
 from swe_af.execution.schemas import DAGState, ExecutionConfig, IssueOutcome
 
 
@@ -795,3 +802,67 @@ class TestCodingLoopIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@pytest.mark.asyncio
+async def test_flagged_path_propagates_fatal_harness_error_from_qa(tmp_path):
+    def call_fn(agent_name, **kwargs):
+        async def _invoke():
+            if agent_name.endswith(".run_qa"):
+                raise FatalHarnessError("auth failed")
+            if agent_name.endswith(".run_code_reviewer"):
+                return {
+                    "approved": False,
+                    "blocking": False,
+                    "summary": "no verdict",
+                }
+            return {}
+
+        return _invoke()
+
+    with pytest.raises(FatalHarnessError, match="auth failed"):
+        await _run_flagged_path(
+            call_fn=call_fn,
+            node_id="node",
+            worktree_path=str(tmp_path),
+            coder_result={"files_changed": []},
+            issue={"name": "ISSUE-1", "title": "T"},
+            iteration=1,
+            iteration_id="i1",
+            iteration_history=[],
+            project_context={},
+            memory_context={},
+            config=ExecutionConfig(),
+            timeout=30,
+            issue_name="ISSUE-1",
+        )
+
+
+@pytest.mark.asyncio
+async def test_flagged_path_propagates_fatal_harness_error_from_reviewer(tmp_path):
+    def call_fn(agent_name, **kwargs):
+        async def _invoke():
+            if agent_name.endswith(".run_qa"):
+                return {"passed": False, "summary": "qa failed"}
+            if agent_name.endswith(".run_code_reviewer"):
+                raise FatalHarnessError("codex auth failed")
+            return {}
+
+        return _invoke()
+
+    with pytest.raises(FatalHarnessError, match="codex auth failed"):
+        await _run_flagged_path(
+            call_fn=call_fn,
+            node_id="node",
+            worktree_path=str(tmp_path),
+            coder_result={"files_changed": []},
+            issue={"name": "ISSUE-1", "title": "T"},
+            iteration=1,
+            iteration_id="i1",
+            iteration_history=[],
+            project_context={},
+            memory_context={},
+            config=ExecutionConfig(),
+            timeout=30,
+            issue_name="ISSUE-1",
+        )

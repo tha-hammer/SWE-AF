@@ -27,16 +27,42 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
+### Embedded-Mode Diagnostics
+
+This repo uses Beads with embedded Dolt storage under `.beads/embeddeddolt/`.
+Prefer these checks:
+
+```bash
+bd dolt status
+bd config apply --dry-run
+bd lint
+bd dolt push
+bd dolt pull
+```
+
+`bd doctor` is not currently supported in embedded mode, and `bd preflight`
+prints Beads CLI project checks rather than SWE-AF project checks. If
+`bd config validate` reports a missing `SWE_AF` database on `127.0.0.1:3307`,
+rerun it without inherited shared-server environment variables:
+
+```bash
+env -u BEADS_DOLT_AUTO_START -u BEADS_DOLT_DATA_DIR -u BEADS_DOLT_SERVER_HOST -u BEADS_DOLT_SERVER_PORT bd config validate
+```
+
+This repo was verified with Homebrew `bd` 1.0.5 first in `PATH`; an older
+`~/.local/bin/bd` may also exist and should not take precedence.
+
 ## Session Completion
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, complete the checks below. Follow the active
+`bd prime` profile for commit/sync/push authority.
 
-**MANDATORY WORKFLOW:**
+**WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+4. **Sync/push only when authorized by the active profile or user**:
    ```bash
    git pull --rebase
    bd dolt push
@@ -44,14 +70,13 @@ bd close <id>         # Complete work
    git status  # MUST show "up to date with origin"
    ```
 5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
+6. **Verify** - All completed changes are committed and pushed when push authority is active
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- Do not leave completed Beads work unsynced when `bd prime` grants sync authority
+- If push is authorized and fails, resolve and retry or report the blocker clearly
+- In conservative mode, report status and proposed commands instead of pushing
 <!-- END BEADS INTEGRATION -->
 
 

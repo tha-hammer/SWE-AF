@@ -324,6 +324,12 @@ class TestExecutionConfig(unittest.TestCase):
         self.assertEqual(cfg.coder_model, "sonnet")
         self.assertEqual(cfg.qa_synthesizer_model, "haiku")
 
+    def test_claude_code_defaults_stay_claude(self) -> None:
+        cfg = ExecutionConfig(runtime="claude_code")
+        self.assertEqual(cfg.ai_provider, "claude")
+        self.assertEqual(cfg.coder_model, "sonnet")
+        self.assertEqual(cfg.qa_synthesizer_model, "haiku")
+
     def test_open_code_resolution(self) -> None:
         cfg = ExecutionConfig(runtime="open_code")
         self.assertEqual(cfg.ai_provider, "opencode")
