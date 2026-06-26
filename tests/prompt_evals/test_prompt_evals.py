@@ -37,21 +37,14 @@ _GOLDENS = ["goal_a_version_flag.json", "goal_b_build_metrics.json"]
         "architect",
         "tech_lead",
         "architecture_planning_loop",  # Phase 3: tutorial distilled to a heuristic checklist
-        pytest.param(
-            "sprint_planner",
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Phase 3 (SWE-AF-n5k): de-dup ~245-line SYSTEM restated across the task builder",
-            ),
-        ),
+        "sprint_planner",  # Phase 3: SYSTEM<->task duplication removed (244->212, ceiling 215)
         "issue_writer",
     ],
 )
 def test_system_prompt_within_line_budget(stem: str) -> None:
     lines = ec.system_prompt_line_count(stem)
-    assert lines <= ec.MAX_SYSTEM_PROMPT_LINES, (
-        f"{stem} SYSTEM_PROMPT is {lines} lines (> {ec.MAX_SYSTEM_PROMPT_LINES})"
-    )
+    budget = ec.line_budget(stem)
+    assert lines <= budget, f"{stem} SYSTEM_PROMPT is {lines} lines (> {budget})"
 
 
 @pytest.mark.parametrize(

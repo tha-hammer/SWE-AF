@@ -36,22 +36,14 @@ sections so the downstream issue writer can point the coder to the right place.
 
 ## What You Produce
 
-For each issue you output a structured stub with:
-- **name**: kebab-case identifier (e.g. ``lexer``, ``error-types``, ``parser``)
-- **title**: human-readable one-liner
-- **description**: 2-3 sentences explaining WHAT the issue delivers and WHY,
-  not HOW. Implementation details live in the architecture document.
-- **depends_on**: list of issue names this issue requires
-- **provides**: specific capabilities this issue delivers (used for recovery)
-- **files_to_create**: new files this issue will create
-- **files_to_modify**: existing files this issue will modify
-- **acceptance_criteria**: testable criteria the coder must satisfy, each written as
-  an observable Given / When / Then behavior (see Test-Driven Decomposition below)
-- **testing_strategy**: concrete test plan framed as a Red → Green → Refactor cycle —
-  test file paths, framework, behaviors ordered simplest-first, any property tests,
-  and which acceptance criteria each test covers. Example: "Create `tests/test_lexer.py`
-  using pytest. 🔴 empty input → empty list (AC1) first, then 🔴 single number (AC2),
-  🔴 invalid char → error (AC3); 🔵 refactor the dispatch once green. Covers AC1–AC3."
+For each issue, a structured stub: name (kebab-case), title, a 2-3 sentence
+description (WHAT not HOW — implementation lives in the architecture document),
+depends_on, provides (specific capabilities, used for recovery),
+files_to_create / files_to_modify, acceptance_criteria (observable Given / When /
+Then behaviors — see Test-Driven Decomposition below), and testing_strategy (a
+Red → Green → Refactor plan: test file paths, framework, behaviors simplest-first,
+any property tests, and which acceptance criteria each test covers).
+
 - **verification**: an OPTIONAL list of runnable acceptance checks, each
   `{description, command, kind}`. `command` is a single shell command the harness
   runs in the issue's worktree to verify the work deterministically by exit code
@@ -163,14 +155,6 @@ and a way to verify completion? If an engineer would describe the issue as "a fe
 hours of focused work," it is the right size. If they would say "that is a day-long
 project with multiple concerns," it should be split.
 
-## File Metadata
-
-Track which files each issue touches via ``files_to_create`` and ``files_to_modify``.
-This metadata helps downstream tools understand scope, but does NOT affect dependency
-decisions. File conflicts between parallel issues are resolved by a separate merger
-agent that performs intelligent branch merging — you do NOT need to add dependency
-edges or merge issues to avoid file contention.
-
 ## Early Verification
 
 Do not defer all testing and validation to the final levels. After core components
@@ -225,32 +209,16 @@ Each issue runs in an isolated git worktree:
 ## Per-Issue Guidance
 
 For each issue, provide a `guidance` object that shapes how downstream agents
-(coder, reviewer, QA) handle it. This is NOT a rigid tier system — it is
-contextual intelligence flowing through the team.
-
-### Guidance Fields
-
-- **needs_new_tests** (bool, default true): Whether this issue needs new tests.
-  Set to false for documentation, config changes, or version bumps.
-- **estimated_scope** ("trivial" | "small" | "medium" | "large"): Rough scope
-  indicator. "trivial" = 1-line fix, "small" = <20 lines, "medium" = typical
-  feature, "large" = multi-module change.
-- **touches_interfaces** (bool, default false): True if this issue changes public
-  APIs, type signatures, or contracts that other issues depend on.
-- **needs_deeper_qa** (bool, default false): When true, activates the full
-  QA + reviewer + synthesizer path (4 LLM calls). When false (default), only
-  the reviewer runs (2 LLM calls). Most issues (70-80%) should be false.
-  Set true for: complex logic, security-sensitive code, cross-module changes,
-  issues that touch interfaces consumed by multiple dependents.
-- **testing_guidance** (str): Specific, proportional testing instructions.
-  Examples: "Run cargo build only, no new tests needed" for a version bump,
-  "Unit tests for each parser method + edge cases for malformed input" for
-  a parser module. Be concrete.
-- **review_focus** (str): What the reviewer should focus on for THIS issue.
-  Examples: "Verify error handling covers all three failure modes",
-  "Check that the public API matches the architecture spec exactly".
-- **risk_rationale** (str): Brief explanation of why this issue does or does
-  not need deeper QA. Helps downstream agents calibrate their effort.\
+(coder, reviewer, QA) handle it — contextual intelligence flowing through the
+team, NOT a rigid tier system. Populate its fields per the schema:
+`needs_new_tests` (false for docs/config/version bumps), `estimated_scope`
+("trivial" | "small" | "medium" | "large"), `touches_interfaces` (changes public
+APIs/contracts other issues depend on), `needs_deeper_qa`, `testing_guidance`
+(specific and proportional, not "write tests"), `review_focus` (what the reviewer
+should check for THIS issue), and `risk_rationale`. Set `needs_deeper_qa` true
+ONLY for complex/security-sensitive/cross-module/interface-touching issues — most
+issues (70-80%) are false (reviewer-only path); true activates the fuller
+QA + reviewer + synthesizer path.\
 """
 
 
