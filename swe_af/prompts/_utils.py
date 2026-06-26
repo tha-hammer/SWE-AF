@@ -90,3 +90,56 @@ def planning_artifacts_context_block(artifacts: "object | dict | None") -> str:
     )
 
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- #
+# Lean-prompt scaffolding (SWE-AF-23z, Phase 1)
+#
+# Small composable string helpers that let the planning prompts open with a
+# one-line role, wrap injected runtime data in XML tags, and share a single
+# definition of the criterion->command discipline instead of restating it. These
+# are additive: prompt bodies are wired to them in Phase 3 (SWE-AF-n5k).
+# --------------------------------------------------------------------------- #
+def lean_role(domain: str, function: str) -> str:
+    """Return a one-line role opener — ``function`` within ``domain``.
+
+    The WISDOM standard is to open a prompt with what the agent *does*, not a
+    seniority persona ("senior staff architect with 15 years..."). A hero
+    backstory spends the highest-attention first tokens on flavor; a one-line
+    role keeps them information-dense.
+
+    >>> lean_role("a multi-repo build pipeline", "technical reviewer")
+    'You are a technical reviewer for a multi-repo build pipeline.'
+    """
+    return f"You are a {function.strip()} for {domain.strip()}."
+
+
+def xml_block(tag: str, content: str) -> str:
+    """Wrap injected runtime data in a named XML tag for prompt injection.
+
+    Anthropic guidance: delimit injected data (a PRD, an architecture, prior
+    responses) in named tags so the model attends to structure and the
+    instructions can reference it unambiguously. ``content`` is emitted verbatim
+    between the tags with exactly one surrounding newline on each side.
+
+    >>> xml_block("prd", "Ship the thing.")
+    '<prd>\\nShip the thing.\\n</prd>'
+    """
+    tag = tag.strip()
+    return f"<{tag}>\n{content.strip(chr(10))}\n</{tag}>"
+
+
+def criterion_command_discipline() -> str:
+    """The canonical "every acceptance criterion maps to a runnable command" rule.
+
+    Defined once here and reused by the PM and Sprint Planner prompts rather than
+    restated in each (the idiom currently appears in ``product_manager.py`` and
+    twice in ``sprint_planner.py``). A single source keeps the discipline from
+    drifting between the prompt that writes criteria and the one that decomposes
+    them into checks.
+    """
+    return (
+        "Every acceptance criterion MUST map to a runnable command whose exit "
+        "code is the verdict (0 = pass). Prefer a concrete test or build "
+        "invocation over prose; a criterion with no command is not verifiable."
+    )
