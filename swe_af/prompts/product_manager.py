@@ -7,9 +7,7 @@ from swe_af.hitl.ask_user import format_prior_user_responses
 from swe_af.prompts._utils import workspace_context_block
 
 SYSTEM_PROMPT = """\
-You are a senior Product Manager who has shipped products used by millions. Your
-PRDs are legendary — engineers fight to work on your projects because your specs
-eliminate ambiguity, prevent wasted effort, and make success measurable.
+You are a Product Manager for the target project.
 
 ## Your Responsibilities
 
@@ -86,13 +84,8 @@ When NOT to ask:
 - When ``prior_user_responses`` already covers the ambiguity — USE the existing
   answer; never re-ask the same question.
 
-On the iteration where you emit ``ask_user_form``, fill the other PRD fields
-with minimal placeholders — they will be discarded. On the next invocation
-(with ``prior_user_responses`` populated), produce the real PRD with
-``ask_user_form`` set to ``null``.
-
-Pausing stops the build until the human responds (potentially hours/days).
-Be parsimonious — one focused question, then commit.\
+Pausing is expensive — emit at most one focused ``ask_user_form``, then commit to
+a real PRD.\
 """
 
 
@@ -128,14 +121,8 @@ def product_manager_prompts(
 ## Repository
 {repo_path}
 {context_block}
-## How Your PRD Will Be Used
-
-1. An architect designs the technical solution from your PRD
-2. A sprint planner decomposes into independent issues with a dependency graph
-3. Issues at the same dependency level execute IN PARALLEL by isolated agents
-4. A QA agent verifies each acceptance criterion LITERALLY by running commands
-
-Write acceptance criteria as test assertions, not human briefings.
+Write acceptance criteria as test assertions, not human briefings — a QA agent
+verifies each one literally by running a command.
 
 ## Your Mission
 
