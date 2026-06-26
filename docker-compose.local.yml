@@ -26,6 +26,9 @@ services:
       - SWE_DEFAULT_MODEL=${SWE_DEFAULT_MODEL:-}
       - SWE_CODEX_AUTH_MODE=${SWE_CODEX_AUTH_MODE:-auto}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Reachable throwaway test DB for DB-forcing deterministic/verify gates
+      # (see docker-compose.yml build-db notes). Target repo's global-setup migrates it.
+      - DATABASE_URL_TEST=${DATABASE_URL_TEST:-postgres://cosmichr_user:password@build-db:5432/cosmichr_buildtest}
     ports:
       - "8003:8003"
     volumes:
@@ -33,6 +36,24 @@ services:
       - ${HOME}/.codex:/root/.codex
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      build-db:
+        condition: service_healthy
+
+  # Generic throwaway Postgres for build-time DB-dependent checks. Ephemeral; the
+  # target repo's test global-setup migrates + truncates it each run. Override
+  # BUILD_DB_* / DATABASE_URL_TEST in .env for a non-cosmic-HR target.
+  build-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=${BUILD_DB_USER:-cosmichr_user}
+      - POSTGRES_PASSWORD=${BUILD_DB_PASSWORD:-password}
+      - POSTGRES_DB=${BUILD_DB_NAME:-cosmichr_buildtest}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BUILD_DB_USER:-cosmichr_user} -d ${BUILD_DB_NAME:-cosmichr_buildtest}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
 volumes:
   workspaces:

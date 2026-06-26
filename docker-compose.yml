@@ -34,6 +34,13 @@ services:
       - SWE_DEFAULT_MODEL=${SWE_DEFAULT_MODEL:-}
       - SWE_CODEX_AUTH_MODE=${SWE_CODEX_AUTH_MODE:-auto}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Reachable throwaway test DB for any issue whose deterministic check / verify
+      # gate HARD-requires a database (REQUIRE_TEST_DB=1, or a test that errors on
+      # connect instead of skipIf(!HAS_DB)). Without this, such gates can never go
+      # green in a DB-less build container. The target repo's own test global-setup
+      # migrates this blank DB, so it stays repo-agnostic; override the URL/creds via
+      # .env for a repo that expects different ones.
+      - DATABASE_URL_TEST=${DATABASE_URL_TEST:-postgres://cosmichr_user:password@build-db:5432/cosmichr_buildtest}
     ports:
       - "8003:8003"
     volumes:
@@ -44,7 +51,10 @@ services:
       - /home/maceo/Dev/SWE-AF:/workspaces/source-swe-af:ro
       - /home/maceo/Dev/agentfield:/workspaces/agentfield-ref:ro
     depends_on:
-      - control-plane
+      control-plane:
+        condition: service_started
+      build-db:
+        condition: service_healthy
     deploy:
       replicas: 1  # Scale with: docker compose up --scale swe-agent=3
 
@@ -79,6 +89,25 @@ services:
       - ${HOME}/.codex:/root/.codex
     depends_on:
       - control-plane
+
+  # Generic throwaway Postgres for build-time DB-dependent checks (migrations, RLS,
+  # integration tests). Ephemeral by design — data lives in the container layer and
+  # is wiped on recreate; the target repo's test global-setup migrates + truncates it
+  # each run. Creds default to cosmic-HR's; override BUILD_DB_* / DATABASE_URL_TEST in
+  # .env for another target. NOTE: a single shared DB — run DB-dependent builds one at
+  # a time (concurrent builds' global-setups would truncate each other). Per-build DBs
+  # are a future enhancement.
+  build-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=${BUILD_DB_USER:-cosmichr_user}
+      - POSTGRES_PASSWORD=${BUILD_DB_PASSWORD:-password}
+      - POSTGRES_DB=${BUILD_DB_NAME:-cosmichr_buildtest}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BUILD_DB_USER:-cosmichr_user} -d ${BUILD_DB_NAME:-cosmichr_buildtest}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
 volumes:
   agentfield-data:

@@ -176,3 +176,37 @@ curl -s -X POST http://localhost:8080/api/v1/execute/async/swe-planner.resume_bu
 - **DB integration tests truncate tables** → run against a throwaway test DB, never the
   live one. The test DB superuser (`cosmichr_user`, `rolbypassrls`) **bypasses RLS**, so
   RLS-enforcement tests "fail" as an env artifact — not a code bug.
+
+---
+
+## 9. Build-time test database (`build-db`)
+
+Some issues' checks **hard-require a live Postgres** — a deterministic gate like
+`REQUIRE_TEST_DB=1 npm run test:integration …`, or a test that errors-on-connect instead
+of `skipIf(!HAS_DB)`. In a DB-less build container those gates can **never go green**: they
+red, exhaust the retry cap, downgrade to advisory, and a foundation migration issue
+(e.g. `cv-001`) then fails and **cascades** (all dependents skipped, empty "succeeded"
+build). This silently sank two Contract View builds.
+
+The factory therefore ships a generic throwaway Postgres, **`build-db`**, baked into the
+compose files (`docker-compose.yml`, `docker-compose.local.yml`, and the running
+`/tmp/ddd-build/compose.yml`). Both build nodes get:
+
+```
+DATABASE_URL_TEST=postgres://cosmichr_user:password@build-db:5432/cosmichr_buildtest
+```
+
+- It's **repo-agnostic**: the *target repo's own* test `global-setup` migrates the blank
+  DB (cosmic-HR's `tests/integration/global-setup.js` runs `migrate.js` + truncates), so
+  the factory doesn't need to know the schema. Override `BUILD_DB_USER/PASSWORD/NAME` and
+  `DATABASE_URL_TEST` in `.env` for a target that expects different creds.
+- **Ephemeral by design** — data is in the container layer, wiped on recreate.
+- **One shared DB across nodes** → run DB-dependent builds **one at a time** (concurrent
+  `global-setup`s would truncate each other). Per-build DBs are a future enhancement.
+- Verify: `docker exec ddd-build-swe-agent-1 bash -c '(exec 3<>/dev/tcp/build-db/5432) &&
+  echo open'`, then from a node `DATABASE_URL="$DATABASE_URL_TEST" node
+  database/scripts/migrate.js` should end `All migrations completed`.
+- **NOT for codex's coder failure** — that's a separate harness bug (codex coder writes 0
+  files; strict-schema rejection in `codex_harness_patch.py`). `build-db` only removes the
+  DB-gate blocker, which is runtime-agnostic. See
+  `thoughts/searchable/shared/research/2026-06-26-codex-coder-empty-cv-build-debug.md`.
