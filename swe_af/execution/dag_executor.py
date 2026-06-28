@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import re
+import subprocess
 import traceback
 from typing import Callable
 
@@ -24,6 +25,47 @@ from swe_af.execution.schemas import (
     ReplanDecision,
     WorkspaceManifest,
 )
+
+# ---------------------------------------------------------------------------
+# Deterministic git merge safety net (greenfield no-op guard)
+# ---------------------------------------------------------------------------
+# The merger is an LLM agent. When the integration branch is near-empty (a
+# greenfield repo where integration == main with only an initial commit), the
+# agent can perceive the merge as a no-op and report success WITHOUT actually
+# merging — leaving the issue branch unmerged. Cleanup then force-deletes it
+# (`git branch -D`), orphaning the work as a dangling commit. These helpers let
+# the orchestrator deterministically verify a branch actually landed and, if
+# not, perform the merge itself so integration advances and nothing is orphaned.
+
+
+def _git(repo_path: str, *args: str, timeout: int = 180) -> subprocess.CompletedProcess:
+    """Run a git command in repo_path. Never raises; inspect returncode."""
+    return subprocess.run(
+        ["git", "-C", repo_path, *args],
+        capture_output=True, text=True, timeout=timeout,
+    )
+
+
+def _branch_is_merged(repo_path: str, branch: str, integration: str) -> bool:
+    """True if branch's tip is an ancestor of integration (already merged)."""
+    return _git(repo_path, "merge-base", "--is-ancestor", branch, integration).returncode == 0
+
+
+def _deterministic_merge(repo_path: str, integration: str, branch: str) -> bool:
+    """Check out integration and merge branch with --no-ff. Abort on conflict.
+
+    Returns True only if the merge actually landed (branch now reachable).
+    """
+    if _git(repo_path, "checkout", integration).returncode != 0:
+        return False
+    merged = _git(
+        repo_path, "merge", "--no-ff", "-m", f"merge {branch} into {integration}", branch
+    )
+    if merged.returncode == 0:
+        return True
+    _git(repo_path, "merge", "--abort")
+    return False
+
 
 # ---------------------------------------------------------------------------
 # Timeout wrapper
@@ -271,6 +313,39 @@ async def _merge_level_branches(
                     tags=["execution", "merge", "retry"],
                 )
             merge_result = await call_fn(f"{node_id}.run_merger", **merge_kwargs)
+
+        # Deterministic safety net: do not trust the LLM merger's self-reported
+        # merged_branches. Verify each completed branch actually landed in the
+        # integration branch; if it didn't (greenfield no-op), merge it here so
+        # integration advances and the branch is never orphaned by cleanup.
+        _integration = dag_state.git_integration_branch
+        _repo = dag_state.repo_path
+        _verified: list[str] = []
+        _orphaned: list[str] = []
+        for _cb in completed_branches:
+            _name = _cb["branch_name"]
+            if _branch_is_merged(_repo, _name, _integration):
+                _verified.append(_name)
+            elif _deterministic_merge(_repo, _integration, _name):
+                _verified.append(_name)
+                if note_fn:
+                    note_fn(
+                        f"Deterministic merge landed {_name} into {_integration} "
+                        f"(LLM merger had not merged it)",
+                        tags=["execution", "merge", "fallback"],
+                    )
+            else:
+                _orphaned.append(_name)
+                if note_fn:
+                    note_fn(
+                        f"Branch {_name} could NOT be merged into {_integration}; "
+                        f"keeping it (excluded from cleanup) for recovery",
+                        tags=["execution", "merge", "unmerged"],
+                    )
+        # Override the merger's claims with verified reality.
+        merge_result["merged_branches"] = _verified
+        merge_result["failed_branches"] = _orphaned
+        merge_result["success"] = bool(_verified) and not _orphaned
 
         dag_state.merge_results.append(merge_result)
         for b in merge_result.get("merged_branches", []):
@@ -1658,7 +1733,7 @@ async def run_dag(
             # Use branch_name if injected by _setup_worktrees (includes build_id prefix),
             # otherwise derive from build_id + sequence + name.
             _bid = dag_state.build_id
-            branches_to_clean = [
+            _derived_branches = [
                 i["branch_name"] if i.get("branch_name") else (
                     f"issue/{_bid}-{str(i.get('sequence_number') or 0).zfill(2)}-{i['name']}"
                     if _bid else
@@ -1666,6 +1741,21 @@ async def run_dag(
                 )
                 for i in active_issues
             ]
+            # Only delete branches we VERIFIED merged into integration. An
+            # unmerged branch (e.g. a greenfield merger no-op the safety net
+            # couldn't auto-resolve) is kept so its commit stays reachable
+            # instead of being orphaned by `git branch -D`.
+            branches_to_clean = [
+                b for b in _derived_branches if b in dag_state.merged_branches
+            ]
+            _kept_branches = [
+                b for b in _derived_branches if b not in dag_state.merged_branches
+            ]
+            if _kept_branches and note_fn:
+                note_fn(
+                    f"Keeping unmerged branches (excluded from cleanup): {_kept_branches}",
+                    tags=["execution", "cleanup", "kept"],
+                )
             cleanup_task = asyncio.create_task(
                 _cleanup_worktrees(
                     dag_state, branches_to_clean, call_fn, node_id, note_fn,
