@@ -1,0 +1,8 @@
+{
+  "name": "middleware",
+  "type": "directory",
+  "interceptors": {},
+  "execution_patterns": {},
+  "process_chains": {},
+  "metadata": {}
+}

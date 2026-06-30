@@ -1,0 +1,6 @@
+{
+  "$schema": "resource_registry/v1",
+  "description": "Empty starter registry for external projects",
+  "resources": {},
+  "conditional_resources": {}
+}

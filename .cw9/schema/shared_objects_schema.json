@@ -1,0 +1,20 @@
+{
+  "name": "shared_objects",
+  "type": "directory",
+  "utilities": {},
+  "common_structures": {},
+  "data_types": {},
+  "verifiers": {},
+  "transformers": {},
+  "error_definitions": {},
+  "constants": {},
+  "settings": {},
+  "logging": {},
+  "security": {},
+  "caching": {},
+  "internationalization": {},
+  "documentation": {},
+  "testing": {},
+  "interceptor_interfaces": {},
+  "metadata": {}
+}

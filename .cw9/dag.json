@@ -1,0 +1,2671 @@
+{
+  "nodes": {
+    "032789e1-4e36-572b-a215-1d6c9bd28de9": {
+      "id": "032789e1-4e36-572b-a215-1d6c9bd28de9",
+      "kind": "resource",
+      "name": "_record_criteria_debt @ swe_af/app.py",
+      "description": "_record_criteria_debt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "0496ca6d-17b6-5bd7-ab2a-16ded77e3415": {
+      "id": "0496ca6d-17b6-5bd7-ab2a-16ded77e3415",
+      "kind": "resource",
+      "name": "_classify @ swe_af/execution/ci_gate.py",
+      "description": "_classify (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "05131bc8-5580-59d0-b192-e787c77dada2": {
+      "id": "05131bc8-5580-59d0-b192-e787c77dada2",
+      "kind": "resource",
+      "name": "ExecutionConfig._model_for @ swe_af/execution/schemas.py",
+      "description": "_model_for (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "088723c8-c39e-5348-a730-b346d8d27415": {
+      "id": "088723c8-c39e-5348-a730-b346d8d27415",
+      "kind": "resource",
+      "name": "tech_lead_prompts @ swe_af/prompts/tech_lead.py",
+      "description": "tech_lead_prompts (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "08c5054d-919a-5ece-b872-7613429481b5": {
+      "id": "08c5054d-919a-5ece-b872-7613429481b5",
+      "kind": "resource",
+      "name": "_save_iteration_state @ swe_af/execution/coding_loop.py",
+      "description": "_save_iteration_state (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "09a73099-ee81-59e3-81dd-089e8e204a46": {
+      "id": "09a73099-ee81-59e3-81dd-089e8e204a46",
+      "kind": "resource",
+      "name": "_parse_approval_result_to_response @ swe_af/hitl/ask_user.py",
+      "description": "_parse_approval_result_to_response (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "0a601d6b-f0a5-55f6-98c0-0fc943e2d91e": {
+      "id": "0a601d6b-f0a5-55f6-98c0-0fc943e2d91e",
+      "kind": "resource",
+      "name": "ExecutionConfig.tech_lead_model @ swe_af/execution/schemas.py",
+      "description": "tech_lead_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "0d93dbe1-48a7-54d9-8f51-fb3f79ad1a62": {
+      "id": "0d93dbe1-48a7-54d9-8f51-fb3f79ad1a62",
+      "kind": "resource",
+      "name": "runtime_to_harness_adapter @ swe_af/runtime/providers.py",
+      "description": "runtime_to_harness_adapter (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "11573dc2-3d65-5868-96f8-47bd0f5cbdef": {
+      "id": "11573dc2-3d65-5868-96f8-47bd0f5cbdef",
+      "kind": "resource",
+      "name": "architect_task_prompt @ swe_af/prompts/architect.py",
+      "description": "architect_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "11869caa-6824-5daf-83ce-c7ced55010bc": {
+      "id": "11869caa-6824-5daf-83ce-c7ced55010bc",
+      "kind": "resource",
+      "name": "ExecutionConfig.issue_advisor_model @ swe_af/execution/schemas.py",
+      "description": "issue_advisor_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "11cd3c5e-c90d-5859-ad80-0482d26d0a7d": {
+      "id": "11cd3c5e-c90d-5859-ad80-0482d26d0a7d",
+      "kind": "resource",
+      "name": "ExecutionConfig.coder_model @ swe_af/execution/schemas.py",
+      "description": "coder_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "12ec8116-0c8b-5c01-bb0d-4e6117f1e8ab": {
+      "id": "12ec8116-0c8b-5c01-bb0d-4e6117f1e8ab",
+      "kind": "resource",
+      "name": "normalize_runtime_provider @ swe_af/runtime/providers.py",
+      "description": "normalize_runtime_provider (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "13be2365-0db6-5e70-b830-30d9f5fd6e7a": {
+      "id": "13be2365-0db6-5e70-b830-30d9f5fd6e7a",
+      "kind": "resource",
+      "name": "build @ swe_af/app.py",
+      "description": "build (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "15167247-fbf1-5a6c-90b8-bcefcc5b714a": {
+      "id": "15167247-fbf1-5a6c-90b8-bcefcc5b714a",
+      "kind": "resource",
+      "name": "_cleanup_worktrees @ swe_af/execution/dag_executor.py",
+      "description": "_cleanup_worktrees (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "154d8477-6ad4-54e7-b422-099ba2ea4008": {
+      "id": "154d8477-6ad4-54e7-b422-099ba2ea4008",
+      "kind": "resource",
+      "name": "_memory_set @ swe_af/execution/coding_loop.py",
+      "description": "_memory_set (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "176cc169-5cd8-5274-8633-3c14a9319ab8": {
+      "id": "176cc169-5cd8-5274-8633-3c14a9319ab8",
+      "kind": "resource",
+      "name": "ExecutionConfig.replan_model @ swe_af/execution/schemas.py",
+      "description": "replan_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "17b1d72e-b098-5a98-8000-802e15b1e5df": {
+      "id": "17b1d72e-b098-5a98-8000-802e15b1e5df",
+      "kind": "resource",
+      "name": "BuildResult.model_dump @ swe_af/execution/schemas.py",
+      "description": "model_dump (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "18229731-a859-56d8-a307-d64ad2ce792d": {
+      "id": "18229731-a859-56d8-a307-d64ad2ce792d",
+      "kind": "resource",
+      "name": "_parse_checks @ swe_af/execution/ci_gate.py",
+      "description": "_parse_checks (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1911391b-878a-5cb7-b6d3-88bbac04f883": {
+      "id": "1911391b-878a-5cb7-b6d3-88bbac04f883",
+      "kind": "resource",
+      "name": "run_issue_writer @ swe_af/reasoners/execution_agents.py",
+      "description": "run_issue_writer (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "197e8d85-005b-50d7-90f2-5fca613ad360": {
+      "id": "197e8d85-005b-50d7-90f2-5fca613ad360",
+      "kind": "resource",
+      "name": "run_workspace_setup @ swe_af/reasoners/execution_agents.py",
+      "description": "run_workspace_setup (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1a53fd94-20d3-5fb5-ba55-73b58e482f3b": {
+      "id": "1a53fd94-20d3-5fb5-ba55-73b58e482f3b",
+      "kind": "resource",
+      "name": "_augment_codex_error_message @ swe_af/runtime/codex_harness_patch.py",
+      "description": "_augment_codex_error_message (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1aaa3ca8-d5bf-5674-9a62-53ae2ef3708d": {
+      "id": "1aaa3ca8-d5bf-5674-9a62-53ae2ef3708d",
+      "kind": "resource",
+      "name": "run_verifier @ swe_af/reasoners/execution_agents.py",
+      "description": "run_verifier (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1aeb4d58-ec59-584e-81b2-b1af30fcf6f0": {
+      "id": "1aeb4d58-ec59-584e-81b2-b1af30fcf6f0",
+      "kind": "resource",
+      "name": "ExecutionConfig._normalize_provider_field @ swe_af/execution/schemas.py",
+      "description": "_normalize_provider_field (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1c1b05de-70d4-522a-9672-a294f79d9b3e": {
+      "id": "1c1b05de-70d4-522a-9672-a294f79d9b3e",
+      "kind": "resource",
+      "name": "repo_finalize_task_prompt @ swe_af/prompts/repo_finalize.py",
+      "description": "repo_finalize_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1e2c7c6f-7e60-569d-a50c-9ef6233e5c92": {
+      "id": "1e2c7c6f-7e60-569d-a50c-9ef6233e5c92",
+      "kind": "resource",
+      "name": "get_scoped_credentials @ swe_af/hitl/credentials_store.py",
+      "description": "get_scoped_credentials (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1e3d250e-3284-56f6-a53a-b53238c2d501": {
+      "id": "1e3d250e-3284-56f6-a53a-b53238c2d501",
+      "kind": "resource",
+      "name": "run_with_ask_user @ swe_af/hitl/wrapper.py",
+      "description": "run_with_ask_user (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1eb8540a-1b5a-5d0f-87d6-6b191135d2a7": {
+      "id": "1eb8540a-1b5a-5d0f-87d6-6b191135d2a7",
+      "kind": "resource",
+      "name": "_extract_ask_user_form @ swe_af/hitl/wrapper.py",
+      "description": "_extract_ask_user_form (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1ed23651-1c12-58af-88f2-9f683e47e128": {
+      "id": "1ed23651-1c12-58af-88f2-9f683e47e128",
+      "kind": "resource",
+      "name": "issue_writer_task_prompt @ swe_af/prompts/issue_writer.py",
+      "description": "issue_writer_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1f2f9a58-b676-54d8-8836-032fa176fccc": {
+      "id": "1f2f9a58-b676-54d8-8836-032fa176fccc",
+      "kind": "resource",
+      "name": "_validate_flat_models @ swe_af/execution/schemas.py",
+      "description": "_validate_flat_models (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "1f7e5d3b-8fe9-5e8a-a0b8-22aa8c0af43f": {
+      "id": "1f7e5d3b-8fe9-5e8a-a0b8-22aa8c0af43f",
+      "kind": "resource",
+      "name": "_write_memory_on_approve @ swe_af/execution/coding_loop.py",
+      "description": "_write_memory_on_approve (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "20130efa-8e52-52f2-a0e5-53f59958215d": {
+      "id": "20130efa-8e52-52f2-a0e5-53f59958215d",
+      "kind": "resource",
+      "name": "_default_model_from_env @ swe_af/execution/schemas.py",
+      "description": "_default_model_from_env (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "236d2520-64a0-5795-978e-1495ee71cd4b": {
+      "id": "236d2520-64a0-5795-978e-1495ee71cd4b",
+      "kind": "resource",
+      "name": "qa_synthesizer_task_prompt @ swe_af/prompts/qa_synthesizer.py",
+      "description": "qa_synthesizer_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "23f7d0ce-5c03-5050-9671-23d98e014e86": {
+      "id": "23f7d0ce-5c03-5050-9671-23d98e014e86",
+      "kind": "resource",
+      "name": "_create_hax_form_request_with_timeout @ swe_af/hitl/ask_user.py",
+      "description": "_create_hax_form_request_with_timeout (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "25f9d148-a31e-5934-ad2d-70b85eeb5254": {
+      "id": "25f9d148-a31e-5934-ad2d-70b85eeb5254",
+      "kind": "resource",
+      "name": "ExecutionConfig._validate_v2_keys @ swe_af/execution/schemas.py",
+      "description": "_validate_v2_keys (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "289873c5-d424-5eb9-a68b-3fe0bb2f25c2": {
+      "id": "289873c5-d424-5eb9-a68b-3fe0bb2f25c2",
+      "kind": "resource",
+      "name": "find_downstream @ swe_af/execution/dag_utils.py",
+      "description": "find_downstream (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "2913d6fb-3585-58cd-823b-6830ebd5a22f": {
+      "id": "2913d6fb-3585-58cd-823b-6830ebd5a22f",
+      "kind": "resource",
+      "name": "build_hax_client_from_env @ swe_af/hitl/ask_user.py",
+      "description": "build_hax_client_from_env (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "29786dac-19a5-5315-a63d-5aef95fe2ec6": {
+      "id": "29786dac-19a5-5315-a63d-5aef95fe2ec6",
+      "kind": "resource",
+      "name": "run_git_init @ swe_af/reasoners/execution_agents.py",
+      "description": "run_git_init (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "2978be8f-3779-59a8-b636-c8c30c058f4d": {
+      "id": "2978be8f-3779-59a8-b636-c8c30c058f4d",
+      "kind": "resource",
+      "name": "run_github_pr @ swe_af/fast/__init__.py",
+      "description": "run_github_pr (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "2adece37-2b47-5214-9aa5-119cf1bf7e9f": {
+      "id": "2adece37-2b47-5214-9aa5-119cf1bf7e9f",
+      "kind": "resource",
+      "name": "_load_iteration_state @ swe_af/execution/coding_loop.py",
+      "description": "_load_iteration_state (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "2cdf6a32-431a-5a7d-89f4-3f965cdfaa7e": {
+      "id": "2cdf6a32-431a-5a7d-89f4-3f965cdfaa7e",
+      "kind": "resource",
+      "name": "unwrap_call_result @ swe_af/execution/envelope.py",
+      "description": "unwrap_call_result (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "2ed1743b-72b6-5ad1-9a4c-aca65025b4a1": {
+      "id": "2ed1743b-72b6-5ad1-9a4c-aca65025b4a1",
+      "kind": "resource",
+      "name": "git_init_task_prompt @ swe_af/prompts/git_init.py",
+      "description": "git_init_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "2f1e9c19-1b20-5dd9-8021-5c5c210203c1": {
+      "id": "2f1e9c19-1b20-5dd9-8021-5c5c210203c1",
+      "kind": "resource",
+      "name": "_clone_single @ swe_af/app.py",
+      "description": "_clone_single (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "305a7f26-bf9d-55e9-825d-e3e6637c469e": {
+      "id": "305a7f26-bf9d-55e9-825d-e3e6637c469e",
+      "kind": "resource",
+      "name": "_format_plan_for_approval @ swe_af/app.py",
+      "description": "_format_plan_for_approval (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "313ad4b0-2b1d-58c4-8261-1723e64d32a7": {
+      "id": "313ad4b0-2b1d-58c4-8261-1723e64d32a7",
+      "kind": "resource",
+      "name": "call_fn @ swe_af/execution/dag_executor.py",
+      "description": "call_fn (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "32b670f2-5247-5cf2-a65c-3b19a3c1b45c": {
+      "id": "32b670f2-5247-5cf2-a65c-3b19a3c1b45c",
+      "kind": "resource",
+      "name": "fix_generator_task_prompt @ swe_af/prompts/fix_generator.py",
+      "description": "fix_generator_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "330a8087-16ad-596c-a071-49e38c001edd": {
+      "id": "330a8087-16ad-596c-a071-49e38c001edd",
+      "kind": "resource",
+      "name": "ExecutionConfig.issue_writer_model @ swe_af/execution/schemas.py",
+      "description": "issue_writer_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "3753a366-d27e-5184-ae29-d18872f37913": {
+      "id": "3753a366-d27e-5184-ae29-d18872f37913",
+      "kind": "resource",
+      "name": "approval_webhook_url @ swe_af/hitl/ask_user.py",
+      "description": "approval_webhook_url (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "3970bf34-4d2b-530e-bff8-8f52f2b079fc": {
+      "id": "3970bf34-4d2b-530e-bff8-8f52f2b079fc",
+      "kind": "resource",
+      "name": "fast_planner_task_prompt @ swe_af/fast/prompts.py",
+      "description": "fast_planner_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "3cd0bdeb-5792-5cd7-b9c0-44600ea7a8b7": {
+      "id": "3cd0bdeb-5792-5cd7-b9c0-44600ea7a8b7",
+      "kind": "resource",
+      "name": "qa_task_prompt @ swe_af/prompts/qa.py",
+      "description": "qa_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "3ce5c472-c3c5-5b8d-a0d2-444f08f46b4a": {
+      "id": "3ce5c472-c3c5-5b8d-a0d2-444f08f46b4a",
+      "kind": "resource",
+      "name": "run_dag @ swe_af/execution/dag_executor.py",
+      "description": "run_dag (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "3f334979-bbcb-52d1-bcf1-55902ee7b1fe": {
+      "id": "3f334979-bbcb-52d1-bcf1-55902ee7b1fe",
+      "kind": "resource",
+      "name": "_run_flagged_path @ swe_af/execution/coding_loop.py",
+      "description": "_run_flagged_path (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "3fc97ba2-6481-5e75-8a91-a454866f3514": {
+      "id": "3fc97ba2-6481-5e75-8a91-a454866f3514",
+      "kind": "resource",
+      "name": "retry_advisor_task_prompt @ swe_af/prompts/retry_advisor.py",
+      "description": "retry_advisor_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "40201cc7-d8cc-5f64-9175-8e98cc0baaba": {
+      "id": "40201cc7-d8cc-5f64-9175-8e98cc0baaba",
+      "kind": "resource",
+      "name": "run_git_init @ swe_af/fast/__init__.py",
+      "description": "run_git_init (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "405125d1-058e-5962-b2f8-eb942080346f": {
+      "id": "405125d1-058e-5962-b2f8-eb942080346f",
+      "kind": "resource",
+      "name": "run_repo_finalize @ swe_af/fast/__init__.py",
+      "description": "run_repo_finalize (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "4153f15d-3e80-54f0-a0c6-dbd83393d794": {
+      "id": "4153f15d-3e80-54f0-a0c6-dbd83393d794",
+      "kind": "resource",
+      "name": "execute @ swe_af/app.py",
+      "description": "execute (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "42631243-9b0e-576d-af56-c846804a09e9": {
+      "id": "42631243-9b0e-576d-af56-c846804a09e9",
+      "kind": "resource",
+      "name": "_maybe_workspace_manifest @ swe_af/reasoners/execution_agents.py",
+      "description": "_maybe_workspace_manifest (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "42c38421-3c9d-54eb-abf5-467a35bc7cef": {
+      "id": "42c38421-3c9d-54eb-abf5-467a35bc7cef",
+      "kind": "resource",
+      "name": "_failing_criteria @ swe_af/app.py",
+      "description": "_failing_criteria (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "447a485a-469d-51ad-a881-ad9098e461a6": {
+      "id": "447a485a-469d-51ad-a881-ad9098e461a6",
+      "kind": "resource",
+      "name": "_post_thread_replies_and_resolve @ swe_af/app.py",
+      "description": "_post_thread_replies_and_resolve (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "46fdab1a-dc1f-5d61-8657-8846e7f03cb9": {
+      "id": "46fdab1a-dc1f-5d61-8657-8846e7f03cb9",
+      "kind": "resource",
+      "name": "_field_to_form_builder_call @ swe_af/hitl/ask_user.py",
+      "description": "_field_to_form_builder_call (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "481e268f-64db-5c9f-9875-b3cf0a143aa5": {
+      "id": "481e268f-64db-5c9f-9875-b3cf0a143aa5",
+      "kind": "resource",
+      "name": "ExecutionConfig.verifier_model @ swe_af/execution/schemas.py",
+      "description": "verifier_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "482b2c51-dcfb-5bcb-829e-ff60bd141803": {
+      "id": "482b2c51-dcfb-5bcb-829e-ff60bd141803",
+      "kind": "resource",
+      "name": "BuildConfig.primary_repo @ swe_af/execution/schemas.py",
+      "description": "primary_repo (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "499d87cc-a4d0-56aa-acf5-f32e6c3fe6a2": {
+      "id": "499d87cc-a4d0-56aa-acf5-f32e6c3fe6a2",
+      "kind": "resource",
+      "name": "_skip_downstream @ swe_af/execution/dag_executor.py",
+      "description": "_skip_downstream (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "49ae02a4-ce12-5422-8b1f-b45bf835b166": {
+      "id": "49ae02a4-ce12-5422-8b1f-b45bf835b166",
+      "kind": "resource",
+      "name": "ExecutionConfig.retry_advisor_model @ swe_af/execution/schemas.py",
+      "description": "retry_advisor_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "49cb6d9f-8b51-5174-97c5-2d768190b2da": {
+      "id": "49cb6d9f-8b51-5174-97c5-2d768190b2da",
+      "kind": "resource",
+      "name": "_extract_values_from_raw @ swe_af/hitl/ask_user.py",
+      "description": "_extract_values_from_raw (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "4b1c6ef6-a5ed-5187-a8de-df83049a4cd3": {
+      "id": "4b1c6ef6-a5ed-5187-a8de-df83049a4cd3",
+      "kind": "resource",
+      "name": "fast_execute_tasks @ swe_af/fast/executor.py",
+      "description": "fast_execute_tasks (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "4d124559-ac55-5d27-9062-385a341bfe76": {
+      "id": "4d124559-ac55-5d27-9062-385a341bfe76",
+      "kind": "resource",
+      "name": "plan @ swe_af/app.py",
+      "description": "plan (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "4d88ead4-6f48-5ba8-b79f-b28382eb7c83": {
+      "id": "4d88ead4-6f48-5ba8-b79f-b28382eb7c83",
+      "kind": "resource",
+      "name": "_enrich_downstream_with_failure_notes @ swe_af/execution/dag_executor.py",
+      "description": "_enrich_downstream_with_failure_notes (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "4ebace5b-6713-5ce8-93c0-981e5f450474": {
+      "id": "4ebace5b-6713-5ce8-93c0-981e5f450474",
+      "kind": "resource",
+      "name": "_invoke_replanner_via_call @ swe_af/execution/dag_executor.py",
+      "description": "_invoke_replanner_via_call (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "506dc229-ecbc-5972-9702-c5f7d2b174f2": {
+      "id": "506dc229-ecbc-5972-9702-c5f7d2b174f2",
+      "kind": "resource",
+      "name": "run_coding_loop @ swe_af/execution/coding_loop.py",
+      "description": "run_coding_loop (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5130a0d0-b36e-5896-b4ca-22da9a372352": {
+      "id": "5130a0d0-b36e-5896-b4ca-22da9a372352",
+      "kind": "resource",
+      "name": "ExecutionConfig.git_model @ swe_af/execution/schemas.py",
+      "description": "git_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "51d40262-1387-5de9-ab71-f971061cbfd6": {
+      "id": "51d40262-1387-5de9-ab71-f971061cbfd6",
+      "kind": "resource",
+      "name": "run_environment_scout @ swe_af/reasoners/pipeline.py",
+      "description": "run_environment_scout (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5498e569-37ba-529d-bb20-916ab95f0186": {
+      "id": "5498e569-37ba-529d-bb20-916ab95f0186",
+      "kind": "resource",
+      "name": "_save_artifact @ swe_af/execution/coding_loop.py",
+      "description": "_save_artifact (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "54e1d8ab-c52d-57da-b142-67a9155babc6": {
+      "id": "54e1d8ab-c52d-57da-b142-67a9155babc6",
+      "kind": "resource",
+      "name": "_fallback_plan @ swe_af/fast/planner.py",
+      "description": "_fallback_plan (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "55cef201-e789-5231-9b05-8e36be668875": {
+      "id": "55cef201-e789-5231-9b05-8e36be668875",
+      "kind": "resource",
+      "name": "run_product_manager @ swe_af/reasoners/pipeline.py",
+      "description": "run_product_manager (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "564113a3-1e99-5bec-b329-86172cc90d32": {
+      "id": "564113a3-1e99-5bec-b329-86172cc90d32",
+      "kind": "resource",
+      "name": "_cleanup_single_repo @ swe_af/execution/dag_executor.py",
+      "description": "_cleanup_single_repo (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5653a2c5-868a-5278-a6ef-c59c7db667ab": {
+      "id": "5653a2c5-868a-5278-a6ef-c59c7db667ab",
+      "kind": "resource",
+      "name": "run_coder @ swe_af/fast/__init__.py",
+      "description": "run_coder (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5763eb3c-97b8-5aa7-b74f-e8e53920ba1d": {
+      "id": "5763eb3c-97b8-5aa7-b74f-e8e53920ba1d",
+      "kind": "resource",
+      "name": "execute_with_native_structured_output @ swe_af/runtime/codex_harness_patch.py",
+      "description": "execute_with_native_structured_output (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "57cfa73a-18e0-584e-a50b-f0b4dcdb0e16": {
+      "id": "57cfa73a-18e0-584e-a50b-f0b4dcdb0e16",
+      "kind": "resource",
+      "name": "_invoke_replanner @ swe_af/reasoners/execution_agents.py",
+      "description": "_invoke_replanner (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "59938794-5dbc-5aeb-99e0-f1a61fae6670": {
+      "id": "59938794-5dbc-5aeb-99e0-f1a61fae6670",
+      "kind": "resource",
+      "name": "generate_fix_issues @ swe_af/reasoners/execution_agents.py",
+      "description": "generate_fix_issues (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "59b635d2-cdd8-583f-9bc9-8ed36401f7a9": {
+      "id": "59b635d2-cdd8-583f-9bc9-8ed36401f7a9",
+      "kind": "resource",
+      "name": "run_workspace_cleanup @ swe_af/reasoners/execution_agents.py",
+      "description": "run_workspace_cleanup (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5a34ccda-7e15-51c4-937a-4877d4af82c6": {
+      "id": "5a34ccda-7e15-51c4-937a-4877d4af82c6",
+      "kind": "resource",
+      "name": "BuildConfig._normalize_repos @ swe_af/execution/schemas.py",
+      "description": "_normalize_repos (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5b250dbe-31e4-53ef-9051-715e21068852": {
+      "id": "5b250dbe-31e4-53ef-9051-715e21068852",
+      "kind": "resource",
+      "name": "known_service_summary_for_prompt @ swe_af/hitl/services.py",
+      "description": "known_service_summary_for_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5cb0897a-6e11-522d-8bfc-c40f69f1b0d0": {
+      "id": "5cb0897a-6e11-522d-8bfc-c40f69f1b0d0",
+      "kind": "resource",
+      "name": "run_github_pr @ swe_af/reasoners/execution_agents.py",
+      "description": "run_github_pr (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5d00bc45-83a8-5ad4-a4a2-4d26df9a082e": {
+      "id": "5d00bc45-83a8-5ad4-a4a2-4d26df9a082e",
+      "kind": "resource",
+      "name": "runtime_to_harness_provider @ swe_af/runtime/providers.py",
+      "description": "runtime_to_harness_provider (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5e3d8a33-7c55-5832-9d4b-b7d8d841047e": {
+      "id": "5e3d8a33-7c55-5832-9d4b-b7d8d841047e",
+      "kind": "resource",
+      "name": "run_issue_advisor @ swe_af/reasoners/execution_agents.py",
+      "description": "run_issue_advisor (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5e5cad40-bf91-5279-a833-0876c2b3f319": {
+      "id": "5e5cad40-bf91-5279-a833-0876c2b3f319",
+      "kind": "resource",
+      "name": "_detect_stuck_loop @ swe_af/execution/coding_loop.py",
+      "description": "_detect_stuck_loop (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "5eabfb28-cbd8-593f-857b-5cddc18af633": {
+      "id": "5eabfb28-cbd8-593f-857b-5cddc18af633",
+      "kind": "resource",
+      "name": "execute_fn @ swe_af/app.py",
+      "description": "execute_fn (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "6010f4d8-3ce4-5a39-9cb8-3a8241a98491": {
+      "id": "6010f4d8-3ce4-5a39-9cb8-3a8241a98491",
+      "kind": "resource",
+      "name": "invoke_replanner @ swe_af/execution/_replanner_compat.py",
+      "description": "invoke_replanner (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "60779bbb-93ec-51df-a1e6-5c3e54b6be9c": {
+      "id": "60779bbb-93ec-51df-a1e6-5c3e54b6be9c",
+      "kind": "resource",
+      "name": "_run_execute_fn @ swe_af/execution/dag_executor.py",
+      "description": "_run_execute_fn (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "6209e37f-b186-54d5-9f86-fe9882095f39": {
+      "id": "6209e37f-b186-54d5-9f86-fe9882095f39",
+      "kind": "resource",
+      "name": "run_coder @ swe_af/reasoners/execution_agents.py",
+      "description": "run_coder (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "66035204-48d4-53ab-9b98-f85ad98b245b": {
+      "id": "66035204-48d4-53ab-9b98-f85ad98b245b",
+      "kind": "resource",
+      "name": "main @ swe_af/app.py",
+      "description": "main (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "662f64d4-1d69-57cd-b046-c5e43d99cdd8": {
+      "id": "662f64d4-1d69-57cd-b046-c5e43d99cdd8",
+      "kind": "resource",
+      "name": "_criteria_to_debt @ swe_af/app.py",
+      "description": "_criteria_to_debt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "67e721de-a953-5c04-9710-c9541c315f82": {
+      "id": "67e721de-a953-5c04-9710-c9541c315f82",
+      "kind": "resource",
+      "name": "_write_memory_on_failure @ swe_af/execution/coding_loop.py",
+      "description": "_write_memory_on_failure (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "68e2f85f-9a9d-5bc4-bc1d-57c304438c70": {
+      "id": "68e2f85f-9a9d-5bc4-bc1d-57c304438c70",
+      "kind": "resource",
+      "name": "run_architect @ swe_af/reasoners/pipeline.py",
+      "description": "run_architect (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "69a71e17-7628-5a0c-b84a-11eecd6af810": {
+      "id": "69a71e17-7628-5a0c-b84a-11eecd6af810",
+      "kind": "resource",
+      "name": "_execute_single_issue @ swe_af/execution/dag_executor.py",
+      "description": "_execute_single_issue (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "6b12d1c3-08e2-519e-ad4e-bdfa23e17f5c": {
+      "id": "6b12d1c3-08e2-519e-ad4e-bdfa23e17f5c",
+      "kind": "resource",
+      "name": "detect_services_from_repo @ swe_af/hitl/services.py",
+      "description": "detect_services_from_repo (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "6bbb2bfb-08ad-5944-820c-b4fce11e4c31": {
+      "id": "6bbb2bfb-08ad-5944-820c-b4fce11e4c31",
+      "kind": "resource",
+      "name": "workspace_cleanup_task_prompt @ swe_af/prompts/workspace.py",
+      "description": "workspace_cleanup_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "6bdcf033-1522-55f9-9c1c-67c3dcb20d1a": {
+      "id": "6bdcf033-1522-55f9-9c1c-67c3dcb20d1a",
+      "kind": "resource",
+      "name": "run_ci_fixer @ swe_af/reasoners/execution_agents.py",
+      "description": "run_ci_fixer (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "6d5d873a-a3d5-528a-8992-137d790905f0": {
+      "id": "6d5d873a-a3d5-528a-8992-137d790905f0",
+      "kind": "resource",
+      "name": "_invoke_advisor @ swe_af/reasoners/execution_agents.py",
+      "description": "_invoke_advisor (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "6db354a4-cb2b-545e-be76-e2ef495f9f9e": {
+      "id": "6db354a4-cb2b-545e-be76-e2ef495f9f9e",
+      "kind": "resource",
+      "name": "_repo_name_from_url @ swe_af/fast/app.py",
+      "description": "_repo_name_from_url (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "70740fd5-460c-53c8-9830-75c71a89693e": {
+      "id": "70740fd5-460c-53c8-9830-75c71a89693e",
+      "kind": "resource",
+      "name": "run_qa @ swe_af/reasoners/execution_agents.py",
+      "description": "run_qa (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "74235fb8-536a-554d-8b65-22bb7a44583c": {
+      "id": "74235fb8-536a-554d-8b65-22bb7a44583c",
+      "kind": "resource",
+      "name": "_ensure_paths @ swe_af/reasoners/pipeline.py",
+      "description": "_ensure_paths (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "75888ab5-ca91-5c52-b18e-e4418483dff3": {
+      "id": "75888ab5-ca91-5c52-b18e-e4418483dff3",
+      "kind": "resource",
+      "name": "_load_checkpoint @ swe_af/execution/dag_executor.py",
+      "description": "_load_checkpoint (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "770be821-4a5b-5924-ac96-42d472630918": {
+      "id": "770be821-4a5b-5924-ac96-42d472630918",
+      "kind": "resource",
+      "name": "_validate_file_conflicts @ swe_af/reasoners/pipeline.py",
+      "description": "_validate_file_conflicts (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "77aaecb5-3429-5375-8651-874e8aa12667": {
+      "id": "77aaecb5-3429-5375-8651-874e8aa12667",
+      "kind": "resource",
+      "name": "_create_hax_request_with_timeout @ swe_af/app.py",
+      "description": "_create_hax_request_with_timeout (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "7936e1c3-02f0-53dc-8ec2-98e89bf3826c": {
+      "id": "7936e1c3-02f0-53dc-8ec2-98e89bf3826c",
+      "kind": "resource",
+      "name": "RepoSpec._validate_repo_url @ swe_af/execution/schemas.py",
+      "description": "_validate_repo_url (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "7a32d4c7-cc70-59b2-ab32-cf00174fba1b": {
+      "id": "7a32d4c7-cc70-59b2-ab32-cf00174fba1b",
+      "kind": "resource",
+      "name": "_write_issue_files_for_replan @ swe_af/execution/dag_executor.py",
+      "description": "_write_issue_files_for_replan (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "7aebc1b2-73af-5b47-807a-56498402e161": {
+      "id": "7aebc1b2-73af-5b47-807a-56498402e161",
+      "kind": "resource",
+      "name": "apply_codex_harness_patch @ swe_af/runtime/codex_harness_patch.py",
+      "description": "apply_codex_harness_patch (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "7cf37148-abe1-5534-a91e-835b3a63cb38": {
+      "id": "7cf37148-abe1-5534-a91e-835b3a63cb38",
+      "kind": "resource",
+      "name": "issue_advisor_task_prompt @ swe_af/prompts/issue_advisor.py",
+      "description": "issue_advisor_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "7dbd0c09-7622-5080-b5ae-c3f842060399": {
+      "id": "7dbd0c09-7622-5080-b5ae-c3f842060399",
+      "kind": "resource",
+      "name": "_attempt_base_merge @ swe_af/app.py",
+      "description": "_attempt_base_merge (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "7dcb769e-26fe-54bb-86a1-e475f083cc62": {
+      "id": "7dcb769e-26fe-54bb-86a1-e475f083cc62",
+      "kind": "resource",
+      "name": "BuildConfig.resolved_models @ swe_af/execution/schemas.py",
+      "description": "resolved_models (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "7fe55b96-951a-5278-9ecb-eed5c13116cd": {
+      "id": "7fe55b96-951a-5278-9ecb-eed5c13116cd",
+      "kind": "resource",
+      "name": "fast_resolve_models @ swe_af/fast/schemas.py",
+      "description": "fast_resolve_models (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8044fbb3-2b8e-5649-8305-07e4bf9daddc": {
+      "id": "8044fbb3-2b8e-5649-8305-07e4bf9daddc",
+      "kind": "resource",
+      "name": "request_user_input_and_pause @ swe_af/hitl/ask_user.py",
+      "description": "request_user_input_and_pause (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "83272e84-e261-5dbf-b39d-45b17540b621": {
+      "id": "83272e84-e261-5dbf-b39d-45b17540b621",
+      "kind": "resource",
+      "name": "replanner_task_prompt @ swe_af/prompts/replanner.py",
+      "description": "replanner_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "83369b63-7de7-55c4-ae77-2c65c4e87285": {
+      "id": "83369b63-7de7-55c4-ae77-2c65c4e87285",
+      "kind": "resource",
+      "name": "ExecutionConfig.architect_model @ swe_af/execution/schemas.py",
+      "description": "architect_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "83f26df4-d67f-5c3f-b3cf-04eefa049338": {
+      "id": "83f26df4-d67f-5c3f-b3cf-04eefa049338",
+      "kind": "resource",
+      "name": "ExecutionConfig.integration_tester_model @ swe_af/execution/schemas.py",
+      "description": "integration_tester_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "844d89b1-e2f9-54e2-96a6-d27b4f716d06": {
+      "id": "844d89b1-e2f9-54e2-96a6-d27b4f716d06",
+      "kind": "resource",
+      "name": "inject_credentials_into_env @ swe_af/hitl/credentials_store.py",
+      "description": "inject_credentials_into_env (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "84bb40de-b6f5-5454-b9e3-67dedeced430": {
+      "id": "84bb40de-b6f5-5454-b9e3-67dedeced430",
+      "kind": "resource",
+      "name": "run_code_reviewer @ swe_af/reasoners/execution_agents.py",
+      "description": "run_code_reviewer (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "87500978-2d30-527a-9ad6-97c96d3c1716": {
+      "id": "87500978-2d30-527a-9ad6-97c96d3c1716",
+      "kind": "resource",
+      "name": "_assign_sequence_numbers @ swe_af/reasoners/pipeline.py",
+      "description": "_assign_sequence_numbers (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "87c76b22-7055-58e7-9b1a-18f8fa594b5a": {
+      "id": "87c76b22-7055-58e7-9b1a-18f8fa594b5a",
+      "kind": "resource",
+      "name": "_enrich_issues_from_setup @ swe_af/execution/dag_executor.py",
+      "description": "_enrich_issues_from_setup (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8b14b5ae-522a-5b60-9fa0-e365aeaf5960": {
+      "id": "8b14b5ae-522a-5b60-9fa0-e365aeaf5960",
+      "kind": "resource",
+      "name": "resume_build @ swe_af/app.py",
+      "description": "resume_build (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8d0900e4-ec56-53d3-9f4e-24cfcfb05f61": {
+      "id": "8d0900e4-ec56-53d3-9f4e-24cfcfb05f61",
+      "kind": "resource",
+      "name": "_websearch_enabled @ swe_af/tools/web_search.py",
+      "description": "_websearch_enabled (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8e46b5e6-fe1e-53f9-b70e-4f573f2d4d02": {
+      "id": "8e46b5e6-fe1e-53f9-b70e-4f573f2d4d02",
+      "kind": "resource",
+      "name": "_run_default_path @ swe_af/execution/coding_loop.py",
+      "description": "_run_default_path (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8ece7699-373d-521f-ad4e-934de29c2a60": {
+      "id": "8ece7699-373d-521f-ad4e-934de29c2a60",
+      "kind": "resource",
+      "name": "_init_one @ swe_af/execution/dag_executor.py",
+      "description": "_init_one (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8ed13a31-4315-5734-9f57-f1fe543ea3fe": {
+      "id": "8ed13a31-4315-5734-9f57-f1fe543ea3fe",
+      "kind": "resource",
+      "name": "_resolve_branch @ swe_af/app.py",
+      "description": "_resolve_branch (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8ed1519e-5f44-536a-9943-a3af6b0d7c17": {
+      "id": "8ed1519e-5f44-536a-9943-a3af6b0d7c17",
+      "kind": "resource",
+      "name": "run_retry_advisor @ swe_af/reasoners/execution_agents.py",
+      "description": "run_retry_advisor (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8f06c773-0ed6-5b66-9d0f-51fa218e4cd8": {
+      "id": "8f06c773-0ed6-5b66-9d0f-51fa218e4cd8",
+      "kind": "resource",
+      "name": "_existing_checkpoint_meta @ swe_af/execution/dag_executor.py",
+      "description": "_existing_checkpoint_meta (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8f3b3af6-bf93-57aa-bc0b-9625437cd6dd": {
+      "id": "8f3b3af6-bf93-57aa-bc0b-9625437cd6dd",
+      "kind": "resource",
+      "name": "format_prior_user_responses @ swe_af/hitl/ask_user.py",
+      "description": "format_prior_user_responses (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "8f72a2a2-8652-5b46-863c-196559144ae9": {
+      "id": "8f72a2a2-8652-5b46-863c-196559144ae9",
+      "kind": "resource",
+      "name": "_build_issue_results @ swe_af/reasoners/execution_agents.py",
+      "description": "_build_issue_results (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "90c72269-a87e-50dd-b256-3c8e7a622c06": {
+      "id": "90c72269-a87e-50dd-b256-3c8e7a622c06",
+      "kind": "resource",
+      "name": "_read_memory_context @ swe_af/execution/coding_loop.py",
+      "description": "_read_memory_context (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9102832b-06b8-5360-a3dd-a803bf280d06": {
+      "id": "9102832b-06b8-5360-a3dd-a803bf280d06",
+      "kind": "resource",
+      "name": "_memory_fn @ swe_af/execution/dag_executor.py",
+      "description": "_memory_fn (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "912a2597-6b6b-5a22-b4dd-968fdb163e77": {
+      "id": "912a2597-6b6b-5a22-b4dd-968fdb163e77",
+      "kind": "resource",
+      "name": "_run_ci_gate @ swe_af/app.py",
+      "description": "_run_ci_gate (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "912a56f1-10bf-5991-9486-37df2cfbf967": {
+      "id": "912a56f1-10bf-5991-9486-37df2cfbf967",
+      "kind": "resource",
+      "name": "_legacy_hint_for_model_key @ swe_af/execution/schemas.py",
+      "description": "_legacy_hint_for_model_key (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9362774c-b6f7-5fad-aac4-6a14a589152f": {
+      "id": "9362774c-b6f7-5fad-aac4-6a14a589152f",
+      "kind": "resource",
+      "name": "WorkspaceManifest.primary_repo @ swe_af/execution/schemas.py",
+      "description": "primary_repo (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9375db13-02d5-5bcc-9a99-37715b44b4e2": {
+      "id": "9375db13-02d5-5bcc-9a99-37715b44b4e2",
+      "kind": "resource",
+      "name": "merger_task_prompt @ swe_af/prompts/merger.py",
+      "description": "merger_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "93b45da3-e3c6-52d6-9ec7-c29de913c820": {
+      "id": "93b45da3-e3c6-52d6-9ec7-c29de913c820",
+      "kind": "resource",
+      "name": "pm_task_prompt @ swe_af/prompts/product_manager.py",
+      "description": "pm_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "94ab6d05-4e2f-507c-958b-42d7467acb3d": {
+      "id": "94ab6d05-4e2f-507c-958b-42d7467acb3d",
+      "kind": "resource",
+      "name": "_clone_repos @ swe_af/app.py",
+      "description": "_clone_repos (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9595a94b-db3a-5787-86ca-7482d18f46d4": {
+      "id": "9595a94b-db3a-5787-86ca-7482d18f46d4",
+      "kind": "resource",
+      "name": "ExecutionConfig.pm_model @ swe_af/execution/schemas.py",
+      "description": "pm_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "97e1e9b8-81cb-5f7a-a55c-1425d77622b0": {
+      "id": "97e1e9b8-81cb-5f7a-a55c-1425d77622b0",
+      "kind": "resource",
+      "name": "_run_codex_cli_with_stdin @ swe_af/runtime/codex_harness_patch.py",
+      "description": "_run_codex_cli_with_stdin (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "980d0469-7504-5202-a849-c7a57245631b": {
+      "id": "980d0469-7504-5202-a849-c7a57245631b",
+      "kind": "resource",
+      "name": "integration_tester_task_prompt @ swe_af/prompts/integration_tester.py",
+      "description": "integration_tester_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "987fec68-e7b2-5397-af11-efb26c6f1ca2": {
+      "id": "987fec68-e7b2-5397-af11-efb26c6f1ca2",
+      "kind": "resource",
+      "name": "pr_resolver_task_prompt @ swe_af/prompts/pr_resolver.py",
+      "description": "pr_resolver_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9ab886e0-5d0f-5356-b461-064935ffc8cc": {
+      "id": "9ab886e0-5d0f-5356-b461-064935ffc8cc",
+      "kind": "resource",
+      "name": "_default_runtime @ swe_af/execution/schemas.py",
+      "description": "_default_runtime (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9baf8734-8ea9-59c3-a8f0-a64612fd1097": {
+      "id": "9baf8734-8ea9-59c3-a8f0-a64612fd1097",
+      "kind": "resource",
+      "name": "ExecutionConfig.model_post_init @ swe_af/execution/schemas.py",
+      "description": "model_post_init (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9bdaec77-25ec-5166-8a60-6b270e4b9940": {
+      "id": "9bdaec77-25ec-5166-8a60-6b270e4b9940",
+      "kind": "resource",
+      "name": "_reject_legacy_config_keys @ swe_af/execution/schemas.py",
+      "description": "_reject_legacy_config_keys (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9c540db5-173b-5ed6-a055-51ff857906f4": {
+      "id": "9c540db5-173b-5ed6-a055-51ff857906f4",
+      "kind": "resource",
+      "name": "_invoke_pm @ swe_af/reasoners/pipeline.py",
+      "description": "_invoke_pm (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "9da93775-b372-5da4-8bed-62c80811e66c": {
+      "id": "9da93775-b372-5da4-8bed-62c80811e66c",
+      "kind": "resource",
+      "name": "ExecutionConfig.qa_synthesizer_model @ swe_af/execution/schemas.py",
+      "description": "qa_synthesizer_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a1ffba46-8211-53e7-b344-b920ba172f57": {
+      "id": "a1ffba46-8211-53e7-b344-b920ba172f57",
+      "kind": "resource",
+      "name": "ExecutionConfig.merger_model @ swe_af/execution/schemas.py",
+      "description": "merger_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a20f1613-3880-537b-8359-7d97ef867fa7": {
+      "id": "a20f1613-3880-537b-8359-7d97ef867fa7",
+      "kind": "resource",
+      "name": "elapsed @ swe_af/execution/ci_gate.py",
+      "description": "elapsed (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a2cb0947-b6d7-520e-baf4-aa286d509449": {
+      "id": "a2cb0947-b6d7-520e-baf4-aa286d509449",
+      "kind": "resource",
+      "name": "workspace_context_block @ swe_af/prompts/_utils.py",
+      "description": "workspace_context_block (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a3185799-9725-5830-9b73-6db348b12dd5": {
+      "id": "a3185799-9725-5830-9b73-6db348b12dd5",
+      "kind": "resource",
+      "name": "_runtime_to_provider @ swe_af/execution/schemas.py",
+      "description": "_runtime_to_provider (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a40c8943-c314-5aaf-960a-11295825d23e": {
+      "id": "a40c8943-c314-5aaf-960a-11295825d23e",
+      "kind": "resource",
+      "name": "BuildConfig.ai_provider @ swe_af/execution/schemas.py",
+      "description": "ai_provider (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a410a9a9-857c-50ca-9379-1051d2c619ef": {
+      "id": "a410a9a9-857c-50ca-9379-1051d2c619ef",
+      "kind": "resource",
+      "name": "ExecutionConfig.sprint_planner_model @ swe_af/execution/schemas.py",
+      "description": "sprint_planner_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a4ecf4fa-f3dc-5c02-a829-5039789e061a": {
+      "id": "a4ecf4fa-f3dc-5c02-a829-5039789e061a",
+      "kind": "resource",
+      "name": "build_form_builder @ swe_af/hitl/ask_user.py",
+      "description": "build_form_builder (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a4ef89d5-a4b5-5023-9ddb-453f612ea4d9": {
+      "id": "a4ef89d5-a4b5-5023-9ddb-453f612ea4d9",
+      "kind": "resource",
+      "name": "_within_soft_deadline @ swe_af/app.py",
+      "description": "_within_soft_deadline (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a62c70fe-2e03-5d67-b7e8-f1a6ca64c03b": {
+      "id": "a62c70fe-2e03-5d67-b7e8-f1a6ca64c03b",
+      "kind": "resource",
+      "name": "_call_with_timeout @ swe_af/execution/dag_executor.py",
+      "description": "_call_with_timeout (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a6a64590-b797-5378-bdac-68229e0bfb50": {
+      "id": "a6a64590-b797-5378-bdac-68229e0bfb50",
+      "kind": "resource",
+      "name": "_harness_with_scoped_credentials @ swe_af/app.py",
+      "description": "_harness_with_scoped_credentials (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a93b0ad9-ee11-59a6-96be-14509e0dad85": {
+      "id": "a93b0ad9-ee11-59a6-96be-14509e0dad85",
+      "kind": "resource",
+      "name": "_failed_criteria_signature @ swe_af/app.py",
+      "description": "_failed_criteria_signature (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "a99f5653-5226-51e4-8c46-530ef431d3ef": {
+      "id": "a99f5653-5226-51e4-8c46-530ef431d3ef",
+      "kind": "resource",
+      "name": "BuildResult.pr_url @ swe_af/execution/schemas.py",
+      "description": "pr_url (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "aa2f95fa-905f-5e66-8f00-0ff39e3041a9": {
+      "id": "aa2f95fa-905f-5e66-8f00-0ff39e3041a9",
+      "kind": "resource",
+      "name": "_build_failed_checks @ swe_af/execution/ci_gate.py",
+      "description": "_build_failed_checks (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "aa57242c-c170-5bda-9f2a-cbbb0c8608bf": {
+      "id": "aa57242c-c170-5bda-9f2a-cbbb0c8608bf",
+      "kind": "resource",
+      "name": "run_replanner @ swe_af/reasoners/execution_agents.py",
+      "description": "run_replanner (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ab002d94-8428-54be-b1f2-9d02899170fa": {
+      "id": "ab002d94-8428-54be-b1f2-9d02899170fa",
+      "kind": "resource",
+      "name": "build @ swe_af/fast/app.py",
+      "description": "build (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ad43460a-4e9b-57eb-9921-03c9a4f029f3": {
+      "id": "ad43460a-4e9b-57eb-9921-03c9a4f029f3",
+      "kind": "resource",
+      "name": "_default_fast_runtime @ swe_af/fast/schemas.py",
+      "description": "_default_fast_runtime (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "adc7d659-0647-5880-b13d-0c5c0db7e99c": {
+      "id": "adc7d659-0647-5880-b13d-0c5c0db7e99c",
+      "kind": "resource",
+      "name": "_iteration_state_path @ swe_af/execution/coding_loop.py",
+      "description": "_iteration_state_path (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "af8213d4-47e4-57ab-b291-c980f24a3353": {
+      "id": "af8213d4-47e4-57ab-b291-c980f24a3353",
+      "kind": "resource",
+      "name": "_execute_level @ swe_af/execution/dag_executor.py",
+      "description": "_execute_level (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "b39a666e-0154-5b70-8779-196e3f52836c": {
+      "id": "b39a666e-0154-5b70-8779-196e3f52836c",
+      "kind": "resource",
+      "name": "run_pr_resolver @ swe_af/reasoners/execution_agents.py",
+      "description": "run_pr_resolver (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "b79a315d-49a1-54c1-9c6d-3d218a6e41ff": {
+      "id": "b79a315d-49a1-54c1-9c6d-3d218a6e41ff",
+      "kind": "resource",
+      "name": "run_merger @ swe_af/reasoners/execution_agents.py",
+      "description": "run_merger (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "b94066f2-7d10-566d-a4c7-b55894feaa62": {
+      "id": "b94066f2-7d10-566d-a4c7-b55894feaa62",
+      "kind": "resource",
+      "name": "workspace_setup_task_prompt @ swe_af/prompts/workspace.py",
+      "description": "workspace_setup_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "baa1cbae-7c03-54eb-b586-a6bd3fb4e3c9": {
+      "id": "baa1cbae-7c03-54eb-b586-a6bd3fb4e3c9",
+      "kind": "resource",
+      "name": "run_ci_fixer @ swe_af/fast/__init__.py",
+      "description": "run_ci_fixer (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "bbd12edc-ea08-5c3c-a5d5-d9e70e09b4c6": {
+      "id": "bbd12edc-ea08-5c3c-a5d5-d9e70e09b4c6",
+      "kind": "resource",
+      "name": "main @ swe_af/fast/app.py",
+      "description": "main (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "bc671afa-a184-5b2b-8da2-875e2bbe00da": {
+      "id": "bc671afa-a184-5b2b-8da2-875e2bbe00da",
+      "kind": "resource",
+      "name": "sprint_planner_prompts @ swe_af/prompts/sprint_planner.py",
+      "description": "sprint_planner_prompts (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "bcb6f92d-b67e-5035-a80e-2ced58cf081c": {
+      "id": "bcb6f92d-b67e-5035-a80e-2ced58cf081c",
+      "kind": "resource",
+      "name": "github_pr_task_prompt @ swe_af/prompts/github_pr.py",
+      "description": "github_pr_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "bd32d763-df7c-5783-978b-9516b9de00a9": {
+      "id": "bd32d763-df7c-5783-978b-9516b9de00a9",
+      "kind": "resource",
+      "name": "_call_merger_for_repo @ swe_af/execution/dag_executor.py",
+      "description": "_call_merger_for_repo (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "bd766620-8ce7-5762-9704-46d2665742da": {
+      "id": "bd766620-8ce7-5762-9704-46d2665742da",
+      "kind": "resource",
+      "name": "verifier_task_prompt @ swe_af/prompts/verifier.py",
+      "description": "verifier_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "be658900-2ca2-5a3c-927c-51e4453eaaaa": {
+      "id": "be658900-2ca2-5a3c-927c-51e4453eaaaa",
+      "kind": "resource",
+      "name": "run_ci_watcher @ swe_af/reasoners/execution_agents.py",
+      "description": "run_ci_watcher (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "be89f259-f71c-500c-b856-2d41d3e68db1": {
+      "id": "be89f259-f71c-500c-b856-2d41d3e68db1",
+      "kind": "resource",
+      "name": "_extract_run_id @ swe_af/execution/ci_gate.py",
+      "description": "_extract_run_id (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "be995d32-f6a4-5f21-a1cc-6730e7a20755": {
+      "id": "be995d32-f6a4-5f21-a1cc-6730e7a20755",
+      "kind": "resource",
+      "name": "BuildConfig._validate_v2_keys @ swe_af/execution/schemas.py",
+      "description": "_validate_v2_keys (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "c1b98cd5-0427-5519-bfcf-5af7ee0ffa02": {
+      "id": "c1b98cd5-0427-5519-bfcf-5af7ee0ffa02",
+      "kind": "resource",
+      "name": "resolve_runtime_models @ swe_af/execution/schemas.py",
+      "description": "resolve_runtime_models (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "c446f64e-c09a-5b60-a197-dc3ce6b0b49c": {
+      "id": "c446f64e-c09a-5b60-a197-dc3ce6b0b49c",
+      "kind": "resource",
+      "name": "recompute_levels @ swe_af/execution/dag_utils.py",
+      "description": "recompute_levels (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "c70f479b-0d92-54af-a22b-fe0d45649471": {
+      "id": "c70f479b-0d92-54af-a22b-fe0d45649471",
+      "kind": "resource",
+      "name": "clear_scoped_credentials @ swe_af/hitl/credentials_store.py",
+      "description": "clear_scoped_credentials (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "c7ca901a-6c71-5e00-91e9-630fd7e6ba96": {
+      "id": "c7ca901a-6c71-5e00-91e9-630fd7e6ba96",
+      "kind": "resource",
+      "name": "product_manager_prompts @ swe_af/prompts/product_manager.py",
+      "description": "product_manager_prompts (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "c9321a4f-b6b4-5c86-9446-1d0753a5891a": {
+      "id": "c9321a4f-b6b4-5c86-9446-1d0753a5891a",
+      "kind": "resource",
+      "name": "_tail @ swe_af/execution/ci_gate.py",
+      "description": "_tail (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "c99865ef-739e-5bac-8354-e4713fa78311": {
+      "id": "c99865ef-739e-5bac-8354-e4713fa78311",
+      "kind": "resource",
+      "name": "ExecutionConfig.ai_provider @ swe_af/execution/schemas.py",
+      "description": "ai_provider (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ca1e9df3-ac7b-5ac9-8a4d-07798faf2b3e": {
+      "id": "ca1e9df3-ac7b-5ac9-8a4d-07798faf2b3e",
+      "kind": "resource",
+      "name": "_run @ swe_af/app.py",
+      "description": "_run (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "cab48fc1-ff1d-5f5a-bad4-675a97ce6a2d": {
+      "id": "cab48fc1-ff1d-5f5a-bad4-675a97ce6a2d",
+      "kind": "resource",
+      "name": "_setup_worktrees @ swe_af/execution/dag_executor.py",
+      "description": "_setup_worktrees (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "cbcb896f-f4ad-5009-8b7a-24e82ca98f2f": {
+      "id": "cbcb896f-f4ad-5009-8b7a-24e82ca98f2f",
+      "kind": "resource",
+      "name": "sprint_planner_task_prompt @ swe_af/prompts/sprint_planner.py",
+      "description": "sprint_planner_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "cdd6da15-0e06-5c5a-8817-c1f31a8bf40a": {
+      "id": "cdd6da15-0e06-5c5a-8817-c1f31a8bf40a",
+      "kind": "resource",
+      "name": "ExecutionConfig.ci_fixer_model @ swe_af/execution/schemas.py",
+      "description": "ci_fixer_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ceedcb29-9516-56e0-9ea1-d5c6464d58b5": {
+      "id": "ceedcb29-9516-56e0-9ea1-d5c6464d58b5",
+      "kind": "resource",
+      "name": "is_fatal_error @ swe_af/execution/fatal_error.py",
+      "description": "is_fatal_error (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "cfdcbdd1-0497-527a-a4c0-544c9030c59d": {
+      "id": "cfdcbdd1-0497-527a-a4c0-544c9030c59d",
+      "kind": "resource",
+      "name": "FatalHarnessError.__init__ @ swe_af/execution/fatal_error.py",
+      "description": "__init__ (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d005aecb-857a-51f6-b770-6cecfa300bdb": {
+      "id": "d005aecb-857a-51f6-b770-6cecfa300bdb",
+      "kind": "resource",
+      "name": "build_prompt_suffix_dispatching @ swe_af/runtime/codex_harness_patch.py",
+      "description": "build_prompt_suffix_dispatching (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d29aee4d-5974-5707-be3c-4cd58ca5bd1b": {
+      "id": "d29aee4d-5974-5707-be3c-4cd58ca5bd1b",
+      "kind": "resource",
+      "name": "check_fatal_harness_error @ swe_af/execution/fatal_error.py",
+      "description": "check_fatal_harness_error (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d3d04302-a3aa-593c-809c-12af6b37ec79": {
+      "id": "d3d04302-a3aa-593c-809c-12af6b37ec79",
+      "kind": "resource",
+      "name": "watch_pr_checks @ swe_af/execution/ci_gate.py",
+      "description": "watch_pr_checks (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d50e26b6-8ba3-51b1-92c2-92f5f3891898": {
+      "id": "d50e26b6-8ba3-51b1-92c2-92f5f3891898",
+      "kind": "resource",
+      "name": "run_integration_tester @ swe_af/reasoners/execution_agents.py",
+      "description": "run_integration_tester (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d56c7ee7-0ad5-5d41-81c3-e85f3ba33fa8": {
+      "id": "d56c7ee7-0ad5-5d41-81c3-e85f3ba33fa8",
+      "kind": "resource",
+      "name": "environment_scout_task_prompt @ swe_af/prompts/environment_scout.py",
+      "description": "environment_scout_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d7942b2c-d6f9-5760-bf51-cb7c612e9394": {
+      "id": "d7942b2c-d6f9-5760-bf51-cb7c612e9394",
+      "kind": "resource",
+      "name": "_invoke_replanner_direct @ swe_af/execution/dag_executor.py",
+      "description": "_invoke_replanner_direct (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d7a402a9-73e6-5f27-8635-9aba6d60535c": {
+      "id": "d7a402a9-73e6-5f27-8635-9aba6d60535c",
+      "kind": "resource",
+      "name": "run_verifier @ swe_af/fast/__init__.py",
+      "description": "run_verifier (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d861de26-1e3d-592f-9adc-4b2b2419f3eb": {
+      "id": "d861de26-1e3d-592f-9adc-4b2b2419f3eb",
+      "kind": "resource",
+      "name": "apply_replan @ swe_af/execution/dag_utils.py",
+      "description": "apply_replan (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "d93b4cf6-8be2-5009-b9b1-ca4d6432e331": {
+      "id": "d93b4cf6-8be2-5009-b9b1-ca4d6432e331",
+      "kind": "resource",
+      "name": "_save_checkpoint @ swe_af/execution/dag_executor.py",
+      "description": "_save_checkpoint (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "da1edd88-2485-5bf8-a35b-f3f6f97c2fe4": {
+      "id": "da1edd88-2485-5bf8-a35b-f3f6f97c2fe4",
+      "kind": "resource",
+      "name": "_init_all_repos @ swe_af/execution/dag_executor.py",
+      "description": "_init_all_repos (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "dc0944df-4703-5181-ab71-77e9faf56bad": {
+      "id": "dc0944df-4703-5181-ab71-77e9faf56bad",
+      "kind": "resource",
+      "name": "_run_integration_tests @ swe_af/execution/dag_executor.py",
+      "description": "_run_integration_tests (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "dc4fa61e-fdc6-5a7e-ace3-825f1874654a": {
+      "id": "dc4fa61e-fdc6-5a7e-ace3-825f1874654a",
+      "kind": "resource",
+      "name": "maybe_apply_coder_guardrail @ swe_af/tools/web_search.py",
+      "description": "maybe_apply_coder_guardrail (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "dda64005-0c52-5b12-b095-2d961702c422": {
+      "id": "dda64005-0c52-5b12-b095-2d961702c422",
+      "kind": "resource",
+      "name": "_is_conclusive @ swe_af/execution/ci_gate.py",
+      "description": "_is_conclusive (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ddbeece8-2dc3-51b9-a287-f7f46e0788b5": {
+      "id": "ddbeece8-2dc3-51b9-a287-f7f46e0788b5",
+      "kind": "resource",
+      "name": "run_tech_lead @ swe_af/reasoners/pipeline.py",
+      "description": "run_tech_lead (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "dde36d2b-b790-5d40-a0a6-db3e47f39e2c": {
+      "id": "dde36d2b-b790-5d40-a0a6-db3e47f39e2c",
+      "kind": "resource",
+      "name": "BuildConfig.model_post_init @ swe_af/execution/schemas.py",
+      "description": "model_post_init (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ddea19d7-c839-5a61-8bf5-f4c384ed2a6d": {
+      "id": "ddea19d7-c839-5a61-8bf5-f4c384ed2a6d",
+      "kind": "resource",
+      "name": "_fetch_failed_logs @ swe_af/execution/ci_gate.py",
+      "description": "_fetch_failed_logs (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "df58739b-1935-5e96-a61a-6b04223ba3c9": {
+      "id": "df58739b-1935-5e96-a61a-6b04223ba3c9",
+      "kind": "resource",
+      "name": "code_reviewer_task_prompt @ swe_af/prompts/code_reviewer.py",
+      "description": "code_reviewer_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "df929a3d-9bf8-5647-90f0-8e1da9e3b5dd": {
+      "id": "df929a3d-9bf8-5647-90f0-8e1da9e3b5dd",
+      "kind": "resource",
+      "name": "_runtime_to_provider @ swe_af/fast/app.py",
+      "description": "_runtime_to_provider (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "e00d2e86-c520-54b8-bfab-c5f8dcc0a7f9": {
+      "id": "e00d2e86-c520-54b8-bfab-c5f8dcc0a7f9",
+      "kind": "resource",
+      "name": "_init_dag_state @ swe_af/execution/dag_executor.py",
+      "description": "_init_dag_state (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "e35b78cf-381d-5137-bce1-105ba861494d": {
+      "id": "e35b78cf-381d-5137-bce1-105ba861494d",
+      "kind": "resource",
+      "name": "_default_runner @ swe_af/execution/ci_gate.py",
+      "description": "_default_runner (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "e3d01f5c-2aa6-535f-88d7-321695ed953d": {
+      "id": "e3d01f5c-2aa6-535f-88d7-321695ed953d",
+      "kind": "resource",
+      "name": "_note @ swe_af/fast/planner.py",
+      "description": "_note (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "e753ae6b-f61e-5f7e-b94f-270c636a3f73": {
+      "id": "e753ae6b-f61e-5f7e-b94f-270c636a3f73",
+      "kind": "resource",
+      "name": "run_sprint_planner @ swe_af/reasoners/pipeline.py",
+      "description": "run_sprint_planner (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "e87feb1d-09a6-5eb0-a0e5-8371eacbaaa9": {
+      "id": "e87feb1d-09a6-5eb0-a0e5-8371eacbaaa9",
+      "kind": "resource",
+      "name": "_dump_main_dag_result @ swe_af/app.py",
+      "description": "_dump_main_dag_result (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "e949b0f7-ad85-5b0d-8450-4bbfaada9b1d": {
+      "id": "e949b0f7-ad85-5b0d-8450-4bbfaada9b1d",
+      "kind": "resource",
+      "name": "run_qa_synthesizer @ swe_af/reasoners/execution_agents.py",
+      "description": "run_qa_synthesizer (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "e9803e09-6ee9-5c22-bbdf-11d3f3b39159": {
+      "id": "e9803e09-6ee9-5c22-bbdf-11d3f3b39159",
+      "kind": "resource",
+      "name": "resolve @ swe_af/app.py",
+      "description": "resolve (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "eac6a4af-9b89-5b25-b9b8-6a274f13e73f": {
+      "id": "eac6a4af-9b89-5b25-b9b8-6a274f13e73f",
+      "kind": "resource",
+      "name": "run_repo_finalize @ swe_af/reasoners/execution_agents.py",
+      "description": "run_repo_finalize (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "eac8a342-e1b7-5b90-9e1c-8ab7e12aa2b1": {
+      "id": "eac8a342-e1b7-5b90-9e1c-8ab7e12aa2b1",
+      "kind": "resource",
+      "name": "fast_plan_tasks @ swe_af/fast/planner.py",
+      "description": "fast_plan_tasks (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ebb599e7-fd86-5f7e-88fe-5748345dfc91": {
+      "id": "ebb599e7-fd86-5f7e-88fe-5748345dfc91",
+      "kind": "resource",
+      "name": "_checkpoint_path @ swe_af/execution/dag_executor.py",
+      "description": "_checkpoint_path (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ec379e4f-7d03-5cfc-965a-c72e46e79265": {
+      "id": "ec379e4f-7d03-5cfc-965a-c72e46e79265",
+      "kind": "resource",
+      "name": "coder_task_prompt @ swe_af/prompts/coder.py",
+      "description": "coder_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ed9acc16-022e-5bcd-ba31-c851ef7b371d": {
+      "id": "ed9acc16-022e-5bcd-ba31-c851ef7b371d",
+      "kind": "resource",
+      "name": "_derive_repo_name @ swe_af/execution/schemas.py",
+      "description": "_derive_repo_name (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ee9560db-1a07-5a9f-b0ee-ea1b1c5fd264": {
+      "id": "ee9560db-1a07-5a9f-b0ee-ea1b1c5fd264",
+      "kind": "resource",
+      "name": "_call_with_timeout @ swe_af/execution/coding_loop.py",
+      "description": "_call_with_timeout (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ef482282-e211-5f64-918f-714b6c74f033": {
+      "id": "ef482282-e211-5f64-918f-714b6c74f033",
+      "kind": "resource",
+      "name": "mark_pr_ready @ swe_af/execution/ci_gate.py",
+      "description": "mark_pr_ready (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "efa112e9-b24a-58aa-9328-e374721fe2d7": {
+      "id": "efa112e9-b24a-58aa-9328-e374721fe2d7",
+      "kind": "resource",
+      "name": "_codex_strict_json_schema @ swe_af/runtime/codex_harness_patch.py",
+      "description": "_codex_strict_json_schema (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f0019e3e-a52d-55b5-a217-5de28439fefb": {
+      "id": "f0019e3e-a52d-55b5-a217-5de28439fefb",
+      "kind": "resource",
+      "name": "_plan_and_execute @ swe_af/fast/app.py",
+      "description": "_plan_and_execute (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f104f9c7-f5c5-5f2c-8d82-c7aa272934e4": {
+      "id": "f104f9c7-f5c5-5f2c-8d82-c7aa272934e4",
+      "kind": "resource",
+      "name": "ExecutionConfig.code_reviewer_model @ swe_af/execution/schemas.py",
+      "description": "code_reviewer_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f1fffb92-0d49-5ec2-82d6-b4c53c6f0580": {
+      "id": "f1fffb92-0d49-5ec2-82d6-b4c53c6f0580",
+      "kind": "resource",
+      "name": "build_prompt_suffix_with_schema_file @ swe_af/runtime/codex_harness_patch.py",
+      "description": "build_prompt_suffix_with_schema_file (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f228288e-337a-5359-9209-cd44768e5828": {
+      "id": "f228288e-337a-5359-9209-cd44768e5828",
+      "kind": "resource",
+      "name": "architect_prompts @ swe_af/prompts/architect.py",
+      "description": "architect_prompts (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f2345784-bdfd-5675-8053-b034eb1661f0": {
+      "id": "f2345784-bdfd-5675-8053-b034eb1661f0",
+      "kind": "resource",
+      "name": "BuildConfig.to_execution_config_dict @ swe_af/execution/schemas.py",
+      "description": "to_execution_config_dict (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f3e13c67-1751-5887-81f5-fbb72a688aa2": {
+      "id": "f3e13c67-1751-5887-81f5-fbb72a688aa2",
+      "kind": "resource",
+      "name": "RepoSpec._validate_role @ swe_af/execution/schemas.py",
+      "description": "_validate_role (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f4eaed74-a349-558b-8ef0-d1bd51ab0e25": {
+      "id": "f4eaed74-a349-558b-8ef0-d1bd51ab0e25",
+      "kind": "resource",
+      "name": "_clear_ask_user_form @ swe_af/hitl/wrapper.py",
+      "description": "_clear_ask_user_form (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f6778381-2388-547a-9b1a-13bf3d720614": {
+      "id": "f6778381-2388-547a-9b1a-13bf3d720614",
+      "kind": "resource",
+      "name": "_guarded_execute @ swe_af/execution/dag_executor.py",
+      "description": "_guarded_execute (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f68afb4c-5d05-5113-933b-68ab0f084aa9": {
+      "id": "f68afb4c-5d05-5113-933b-68ab0f084aa9",
+      "kind": "resource",
+      "name": "_normalize_provider @ swe_af/execution/schemas.py",
+      "description": "_normalize_provider (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f7c5eff4-48d2-579f-9126-1111b6fe6396": {
+      "id": "f7c5eff4-48d2-579f-9126-1111b6fe6396",
+      "kind": "resource",
+      "name": "ci_fixer_task_prompt @ swe_af/prompts/ci_fixer.py",
+      "description": "ci_fixer_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f7f6f1d6-bf1b-5a2d-b0be-91c2e44e94e0": {
+      "id": "f7f6f1d6-bf1b-5a2d-b0be-91c2e44e94e0",
+      "kind": "resource",
+      "name": "_harness_with_provider_context @ swe_af/runtime/codex_harness_patch.py",
+      "description": "_harness_with_provider_context (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f8bcf50d-c93d-57ad-beee-cebee295c98e": {
+      "id": "f8bcf50d-c93d-57ad-beee-cebee295c98e",
+      "kind": "resource",
+      "name": "tech_lead_task_prompt @ swe_af/prompts/tech_lead.py",
+      "description": "tech_lead_task_prompt (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "f95a9223-2c8c-573e-a0ec-d4e6ed1c4201": {
+      "id": "f95a9223-2c8c-573e-a0ec-d4e6ed1c4201",
+      "kind": "resource",
+      "name": "ExecutionConfig.qa_model @ swe_af/execution/schemas.py",
+      "description": "qa_model (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "fa7a8bdb-bcc0-50f0-9372-d990989f3791": {
+      "id": "fa7a8bdb-bcc0-50f0-9372-d990989f3791",
+      "kind": "resource",
+      "name": "_memory_get @ swe_af/execution/coding_loop.py",
+      "description": "_memory_get (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "fb9a3e96-7ada-5ce4-a423-70378bafd9dd": {
+      "id": "fb9a3e96-7ada-5ce4-a423-70378bafd9dd",
+      "kind": "resource",
+      "name": "_build_dag_state @ swe_af/reasoners/execution_agents.py",
+      "description": "_build_dag_state (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "fc28b69c-59ab-584c-a22e-dbdb4a747cdb": {
+      "id": "fc28b69c-59ab-584c-a22e-dbdb4a747cdb",
+      "kind": "resource",
+      "name": "fast_verify @ swe_af/fast/verifier.py",
+      "description": "fast_verify (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "fd091c04-68c5-5094-8764-7d48c1b07ae2": {
+      "id": "fd091c04-68c5-5094-8764-7d48c1b07ae2",
+      "kind": "resource",
+      "name": "store_scoped_credentials @ swe_af/hitl/credentials_store.py",
+      "description": "store_scoped_credentials (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "fd774ec6-e41b-506c-b438-bfa6474ff086": {
+      "id": "fd774ec6-e41b-506c-b438-bfa6474ff086",
+      "kind": "resource",
+      "name": "_compute_levels @ swe_af/reasoners/pipeline.py",
+      "description": "_compute_levels (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "fe13f2ce-5d2a-55ca-8566-bf5334a0407b": {
+      "id": "fe13f2ce-5d2a-55ca-8566-bf5334a0407b",
+      "kind": "resource",
+      "name": "run_ci_watcher @ swe_af/fast/__init__.py",
+      "description": "run_ci_watcher (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "fed012d7-537d-5253-9604-e04cf3aed8eb": {
+      "id": "fed012d7-537d-5253-9604-e04cf3aed8eb",
+      "kind": "resource",
+      "name": "_merge_level_branches @ swe_af/execution/dag_executor.py",
+      "description": "_merge_level_branches (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    },
+    "ff7b1b39-4d18-506a-83e9-e5455d317f86": {
+      "id": "ff7b1b39-4d18-506a-83e9-e5455d317f86",
+      "kind": "resource",
+      "name": "_invoke_scout @ swe_af/reasoners/pipeline.py",
+      "description": "_invoke_scout (skeleton only, awaiting LLM extraction)",
+      "version": 1
+    }
+  },
+  "edges": [],
+  "closure": {
+    "032789e1-4e36-572b-a215-1d6c9bd28de9": [],
+    "0496ca6d-17b6-5bd7-ab2a-16ded77e3415": [],
+    "05131bc8-5580-59d0-b192-e787c77dada2": [],
+    "088723c8-c39e-5348-a730-b346d8d27415": [],
+    "08c5054d-919a-5ece-b872-7613429481b5": [],
+    "09a73099-ee81-59e3-81dd-089e8e204a46": [],
+    "0a601d6b-f0a5-55f6-98c0-0fc943e2d91e": [],
+    "0d93dbe1-48a7-54d9-8f51-fb3f79ad1a62": [],
+    "11573dc2-3d65-5868-96f8-47bd0f5cbdef": [],
+    "11869caa-6824-5daf-83ce-c7ced55010bc": [],
+    "11cd3c5e-c90d-5859-ad80-0482d26d0a7d": [],
+    "12ec8116-0c8b-5c01-bb0d-4e6117f1e8ab": [],
+    "13be2365-0db6-5e70-b830-30d9f5fd6e7a": [],
+    "15167247-fbf1-5a6c-90b8-bcefcc5b714a": [],
+    "154d8477-6ad4-54e7-b422-099ba2ea4008": [],
+    "176cc169-5cd8-5274-8633-3c14a9319ab8": [],
+    "17b1d72e-b098-5a98-8000-802e15b1e5df": [],
+    "18229731-a859-56d8-a307-d64ad2ce792d": [],
+    "1911391b-878a-5cb7-b6d3-88bbac04f883": [],
+    "197e8d85-005b-50d7-90f2-5fca613ad360": [],
+    "1a53fd94-20d3-5fb5-ba55-73b58e482f3b": [],
+    "1aaa3ca8-d5bf-5674-9a62-53ae2ef3708d": [],
+    "1aeb4d58-ec59-584e-81b2-b1af30fcf6f0": [],
+    "1c1b05de-70d4-522a-9672-a294f79d9b3e": [],
+    "1e2c7c6f-7e60-569d-a50c-9ef6233e5c92": [],
+    "1e3d250e-3284-56f6-a53a-b53238c2d501": [],
+    "1eb8540a-1b5a-5d0f-87d6-6b191135d2a7": [],
+    "1ed23651-1c12-58af-88f2-9f683e47e128": [],
+    "1f2f9a58-b676-54d8-8836-032fa176fccc": [],
+    "1f7e5d3b-8fe9-5e8a-a0b8-22aa8c0af43f": [],
+    "20130efa-8e52-52f2-a0e5-53f59958215d": [],
+    "236d2520-64a0-5795-978e-1495ee71cd4b": [],
+    "23f7d0ce-5c03-5050-9671-23d98e014e86": [],
+    "25f9d148-a31e-5934-ad2d-70b85eeb5254": [],
+    "289873c5-d424-5eb9-a68b-3fe0bb2f25c2": [],
+    "2913d6fb-3585-58cd-823b-6830ebd5a22f": [],
+    "29786dac-19a5-5315-a63d-5aef95fe2ec6": [],
+    "2978be8f-3779-59a8-b636-c8c30c058f4d": [],
+    "2adece37-2b47-5214-9aa5-119cf1bf7e9f": [],
+    "2cdf6a32-431a-5a7d-89f4-3f965cdfaa7e": [],
+    "2ed1743b-72b6-5ad1-9a4c-aca65025b4a1": [],
+    "2f1e9c19-1b20-5dd9-8021-5c5c210203c1": [],
+    "305a7f26-bf9d-55e9-825d-e3e6637c469e": [],
+    "313ad4b0-2b1d-58c4-8261-1723e64d32a7": [],
+    "32b670f2-5247-5cf2-a65c-3b19a3c1b45c": [],
+    "330a8087-16ad-596c-a071-49e38c001edd": [],
+    "3753a366-d27e-5184-ae29-d18872f37913": [],
+    "3970bf34-4d2b-530e-bff8-8f52f2b079fc": [],
+    "3cd0bdeb-5792-5cd7-b9c0-44600ea7a8b7": [],
+    "3ce5c472-c3c5-5b8d-a0d2-444f08f46b4a": [],
+    "3f334979-bbcb-52d1-bcf1-55902ee7b1fe": [],
+    "3fc97ba2-6481-5e75-8a91-a454866f3514": [],
+    "40201cc7-d8cc-5f64-9175-8e98cc0baaba": [],
+    "405125d1-058e-5962-b2f8-eb942080346f": [],
+    "4153f15d-3e80-54f0-a0c6-dbd83393d794": [],
+    "42631243-9b0e-576d-af56-c846804a09e9": [],
+    "42c38421-3c9d-54eb-abf5-467a35bc7cef": [],
+    "447a485a-469d-51ad-a881-ad9098e461a6": [],
+    "46fdab1a-dc1f-5d61-8657-8846e7f03cb9": [],
+    "481e268f-64db-5c9f-9875-b3cf0a143aa5": [],
+    "482b2c51-dcfb-5bcb-829e-ff60bd141803": [],
+    "499d87cc-a4d0-56aa-acf5-f32e6c3fe6a2": [],
+    "49ae02a4-ce12-5422-8b1f-b45bf835b166": [],
+    "49cb6d9f-8b51-5174-97c5-2d768190b2da": [],
+    "4b1c6ef6-a5ed-5187-a8de-df83049a4cd3": [],
+    "4d124559-ac55-5d27-9062-385a341bfe76": [],
+    "4d88ead4-6f48-5ba8-b79f-b28382eb7c83": [],
+    "4ebace5b-6713-5ce8-93c0-981e5f450474": [],
+    "506dc229-ecbc-5972-9702-c5f7d2b174f2": [],
+    "5130a0d0-b36e-5896-b4ca-22da9a372352": [],
+    "51d40262-1387-5de9-ab71-f971061cbfd6": [],
+    "5498e569-37ba-529d-bb20-916ab95f0186": [],
+    "54e1d8ab-c52d-57da-b142-67a9155babc6": [],
+    "55cef201-e789-5231-9b05-8e36be668875": [],
+    "564113a3-1e99-5bec-b329-86172cc90d32": [],
+    "5653a2c5-868a-5278-a6ef-c59c7db667ab": [],
+    "5763eb3c-97b8-5aa7-b74f-e8e53920ba1d": [],
+    "57cfa73a-18e0-584e-a50b-f0b4dcdb0e16": [],
+    "59938794-5dbc-5aeb-99e0-f1a61fae6670": [],
+    "59b635d2-cdd8-583f-9bc9-8ed36401f7a9": [],
+    "5a34ccda-7e15-51c4-937a-4877d4af82c6": [],
+    "5b250dbe-31e4-53ef-9051-715e21068852": [],
+    "5cb0897a-6e11-522d-8bfc-c40f69f1b0d0": [],
+    "5d00bc45-83a8-5ad4-a4a2-4d26df9a082e": [],
+    "5e3d8a33-7c55-5832-9d4b-b7d8d841047e": [],
+    "5e5cad40-bf91-5279-a833-0876c2b3f319": [],
+    "5eabfb28-cbd8-593f-857b-5cddc18af633": [],
+    "6010f4d8-3ce4-5a39-9cb8-3a8241a98491": [],
+    "60779bbb-93ec-51df-a1e6-5c3e54b6be9c": [],
+    "6209e37f-b186-54d5-9f86-fe9882095f39": [],
+    "66035204-48d4-53ab-9b98-f85ad98b245b": [],
+    "662f64d4-1d69-57cd-b046-c5e43d99cdd8": [],
+    "67e721de-a953-5c04-9710-c9541c315f82": [],
+    "68e2f85f-9a9d-5bc4-bc1d-57c304438c70": [],
+    "69a71e17-7628-5a0c-b84a-11eecd6af810": [],
+    "6b12d1c3-08e2-519e-ad4e-bdfa23e17f5c": [],
+    "6bbb2bfb-08ad-5944-820c-b4fce11e4c31": [],
+    "6bdcf033-1522-55f9-9c1c-67c3dcb20d1a": [],
+    "6d5d873a-a3d5-528a-8992-137d790905f0": [],
+    "6db354a4-cb2b-545e-be76-e2ef495f9f9e": [],
+    "70740fd5-460c-53c8-9830-75c71a89693e": [],
+    "74235fb8-536a-554d-8b65-22bb7a44583c": [],
+    "75888ab5-ca91-5c52-b18e-e4418483dff3": [],
+    "770be821-4a5b-5924-ac96-42d472630918": [],
+    "77aaecb5-3429-5375-8651-874e8aa12667": [],
+    "7936e1c3-02f0-53dc-8ec2-98e89bf3826c": [],
+    "7a32d4c7-cc70-59b2-ab32-cf00174fba1b": [],
+    "7aebc1b2-73af-5b47-807a-56498402e161": [],
+    "7cf37148-abe1-5534-a91e-835b3a63cb38": [],
+    "7dbd0c09-7622-5080-b5ae-c3f842060399": [],
+    "7dcb769e-26fe-54bb-86a1-e475f083cc62": [],
+    "7fe55b96-951a-5278-9ecb-eed5c13116cd": [],
+    "8044fbb3-2b8e-5649-8305-07e4bf9daddc": [],
+    "83272e84-e261-5dbf-b39d-45b17540b621": [],
+    "83369b63-7de7-55c4-ae77-2c65c4e87285": [],
+    "83f26df4-d67f-5c3f-b3cf-04eefa049338": [],
+    "844d89b1-e2f9-54e2-96a6-d27b4f716d06": [],
+    "84bb40de-b6f5-5454-b9e3-67dedeced430": [],
+    "87500978-2d30-527a-9ad6-97c96d3c1716": [],
+    "87c76b22-7055-58e7-9b1a-18f8fa594b5a": [],
+    "8b14b5ae-522a-5b60-9fa0-e365aeaf5960": [],
+    "8d0900e4-ec56-53d3-9f4e-24cfcfb05f61": [],
+    "8e46b5e6-fe1e-53f9-b70e-4f573f2d4d02": [],
+    "8ece7699-373d-521f-ad4e-934de29c2a60": [],
+    "8ed13a31-4315-5734-9f57-f1fe543ea3fe": [],
+    "8ed1519e-5f44-536a-9943-a3af6b0d7c17": [],
+    "8f06c773-0ed6-5b66-9d0f-51fa218e4cd8": [],
+    "8f3b3af6-bf93-57aa-bc0b-9625437cd6dd": [],
+    "8f72a2a2-8652-5b46-863c-196559144ae9": [],
+    "90c72269-a87e-50dd-b256-3c8e7a622c06": [],
+    "9102832b-06b8-5360-a3dd-a803bf280d06": [],
+    "912a2597-6b6b-5a22-b4dd-968fdb163e77": [],
+    "912a56f1-10bf-5991-9486-37df2cfbf967": [],
+    "9362774c-b6f7-5fad-aac4-6a14a589152f": [],
+    "9375db13-02d5-5bcc-9a99-37715b44b4e2": [],
+    "93b45da3-e3c6-52d6-9ec7-c29de913c820": [],
+    "94ab6d05-4e2f-507c-958b-42d7467acb3d": [],
+    "9595a94b-db3a-5787-86ca-7482d18f46d4": [],
+    "97e1e9b8-81cb-5f7a-a55c-1425d77622b0": [],
+    "980d0469-7504-5202-a849-c7a57245631b": [],
+    "987fec68-e7b2-5397-af11-efb26c6f1ca2": [],
+    "9ab886e0-5d0f-5356-b461-064935ffc8cc": [],
+    "9baf8734-8ea9-59c3-a8f0-a64612fd1097": [],
+    "9bdaec77-25ec-5166-8a60-6b270e4b9940": [],
+    "9c540db5-173b-5ed6-a055-51ff857906f4": [],
+    "9da93775-b372-5da4-8bed-62c80811e66c": [],
+    "a1ffba46-8211-53e7-b344-b920ba172f57": [],
+    "a20f1613-3880-537b-8359-7d97ef867fa7": [],
+    "a2cb0947-b6d7-520e-baf4-aa286d509449": [],
+    "a3185799-9725-5830-9b73-6db348b12dd5": [],
+    "a40c8943-c314-5aaf-960a-11295825d23e": [],
+    "a410a9a9-857c-50ca-9379-1051d2c619ef": [],
+    "a4ecf4fa-f3dc-5c02-a829-5039789e061a": [],
+    "a4ef89d5-a4b5-5023-9ddb-453f612ea4d9": [],
+    "a62c70fe-2e03-5d67-b7e8-f1a6ca64c03b": [],
+    "a6a64590-b797-5378-bdac-68229e0bfb50": [],
+    "a93b0ad9-ee11-59a6-96be-14509e0dad85": [],
+    "a99f5653-5226-51e4-8c46-530ef431d3ef": [],
+    "aa2f95fa-905f-5e66-8f00-0ff39e3041a9": [],
+    "aa57242c-c170-5bda-9f2a-cbbb0c8608bf": [],
+    "ab002d94-8428-54be-b1f2-9d02899170fa": [],
+    "ad43460a-4e9b-57eb-9921-03c9a4f029f3": [],
+    "adc7d659-0647-5880-b13d-0c5c0db7e99c": [],
+    "af8213d4-47e4-57ab-b291-c980f24a3353": [],
+    "b39a666e-0154-5b70-8779-196e3f52836c": [],
+    "b79a315d-49a1-54c1-9c6d-3d218a6e41ff": [],
+    "b94066f2-7d10-566d-a4c7-b55894feaa62": [],
+    "baa1cbae-7c03-54eb-b586-a6bd3fb4e3c9": [],
+    "bbd12edc-ea08-5c3c-a5d5-d9e70e09b4c6": [],
+    "bc671afa-a184-5b2b-8da2-875e2bbe00da": [],
+    "bcb6f92d-b67e-5035-a80e-2ced58cf081c": [],
+    "bd32d763-df7c-5783-978b-9516b9de00a9": [],
+    "bd766620-8ce7-5762-9704-46d2665742da": [],
+    "be658900-2ca2-5a3c-927c-51e4453eaaaa": [],
+    "be89f259-f71c-500c-b856-2d41d3e68db1": [],
+    "be995d32-f6a4-5f21-a1cc-6730e7a20755": [],
+    "c1b98cd5-0427-5519-bfcf-5af7ee0ffa02": [],
+    "c446f64e-c09a-5b60-a197-dc3ce6b0b49c": [],
+    "c70f479b-0d92-54af-a22b-fe0d45649471": [],
+    "c7ca901a-6c71-5e00-91e9-630fd7e6ba96": [],
+    "c9321a4f-b6b4-5c86-9446-1d0753a5891a": [],
+    "c99865ef-739e-5bac-8354-e4713fa78311": [],
+    "ca1e9df3-ac7b-5ac9-8a4d-07798faf2b3e": [],
+    "cab48fc1-ff1d-5f5a-bad4-675a97ce6a2d": [],
+    "cbcb896f-f4ad-5009-8b7a-24e82ca98f2f": [],
+    "cdd6da15-0e06-5c5a-8817-c1f31a8bf40a": [],
+    "ceedcb29-9516-56e0-9ea1-d5c6464d58b5": [],
+    "cfdcbdd1-0497-527a-a4c0-544c9030c59d": [],
+    "d005aecb-857a-51f6-b770-6cecfa300bdb": [],
+    "d29aee4d-5974-5707-be3c-4cd58ca5bd1b": [],
+    "d3d04302-a3aa-593c-809c-12af6b37ec79": [],
+    "d50e26b6-8ba3-51b1-92c2-92f5f3891898": [],
+    "d56c7ee7-0ad5-5d41-81c3-e85f3ba33fa8": [],
+    "d7942b2c-d6f9-5760-bf51-cb7c612e9394": [],
+    "d7a402a9-73e6-5f27-8635-9aba6d60535c": [],
+    "d861de26-1e3d-592f-9adc-4b2b2419f3eb": [],
+    "d93b4cf6-8be2-5009-b9b1-ca4d6432e331": [],
+    "da1edd88-2485-5bf8-a35b-f3f6f97c2fe4": [],
+    "dc0944df-4703-5181-ab71-77e9faf56bad": [],
+    "dc4fa61e-fdc6-5a7e-ace3-825f1874654a": [],
+    "dda64005-0c52-5b12-b095-2d961702c422": [],
+    "ddbeece8-2dc3-51b9-a287-f7f46e0788b5": [],
+    "dde36d2b-b790-5d40-a0a6-db3e47f39e2c": [],
+    "ddea19d7-c839-5a61-8bf5-f4c384ed2a6d": [],
+    "df58739b-1935-5e96-a61a-6b04223ba3c9": [],
+    "df929a3d-9bf8-5647-90f0-8e1da9e3b5dd": [],
+    "e00d2e86-c520-54b8-bfab-c5f8dcc0a7f9": [],
+    "e35b78cf-381d-5137-bce1-105ba861494d": [],
+    "e3d01f5c-2aa6-535f-88d7-321695ed953d": [],
+    "e753ae6b-f61e-5f7e-b94f-270c636a3f73": [],
+    "e87feb1d-09a6-5eb0-a0e5-8371eacbaaa9": [],
+    "e949b0f7-ad85-5b0d-8450-4bbfaada9b1d": [],
+    "e9803e09-6ee9-5c22-bbdf-11d3f3b39159": [],
+    "eac6a4af-9b89-5b25-b9b8-6a274f13e73f": [],
+    "eac8a342-e1b7-5b90-9e1c-8ab7e12aa2b1": [],
+    "ebb599e7-fd86-5f7e-88fe-5748345dfc91": [],
+    "ec379e4f-7d03-5cfc-965a-c72e46e79265": [],
+    "ed9acc16-022e-5bcd-ba31-c851ef7b371d": [],
+    "ee9560db-1a07-5a9f-b0ee-ea1b1c5fd264": [],
+    "ef482282-e211-5f64-918f-714b6c74f033": [],
+    "efa112e9-b24a-58aa-9328-e374721fe2d7": [],
+    "f0019e3e-a52d-55b5-a217-5de28439fefb": [],
+    "f104f9c7-f5c5-5f2c-8d82-c7aa272934e4": [],
+    "f1fffb92-0d49-5ec2-82d6-b4c53c6f0580": [],
+    "f228288e-337a-5359-9209-cd44768e5828": [],
+    "f2345784-bdfd-5675-8053-b034eb1661f0": [],
+    "f3e13c67-1751-5887-81f5-fbb72a688aa2": [],
+    "f4eaed74-a349-558b-8ef0-d1bd51ab0e25": [],
+    "f6778381-2388-547a-9b1a-13bf3d720614": [],
+    "f68afb4c-5d05-5113-933b-68ab0f084aa9": [],
+    "f7c5eff4-48d2-579f-9126-1111b6fe6396": [],
+    "f7f6f1d6-bf1b-5a2d-b0be-91c2e44e94e0": [],
+    "f8bcf50d-c93d-57ad-beee-cebee295c98e": [],
+    "f95a9223-2c8c-573e-a0ec-d4e6ed1c4201": [],
+    "fa7a8bdb-bcc0-50f0-9372-d990989f3791": [],
+    "fb9a3e96-7ada-5ce4-a423-70378bafd9dd": [],
+    "fc28b69c-59ab-584c-a22e-dbdb4a747cdb": [],
+    "fd091c04-68c5-5094-8764-7d48c1b07ae2": [],
+    "fd774ec6-e41b-506c-b438-bfa6474ff086": [],
+    "fe13f2ce-5d2a-55ca-8566-bf5334a0407b": [],
+    "fed012d7-537d-5253-9604-e04cf3aed8eb": [],
+    "ff7b1b39-4d18-506a-83e9-e5455d317f86": []
+  },
+  "components": {
+    "component-0": [
+      "032789e1-4e36-572b-a215-1d6c9bd28de9"
+    ],
+    "component-1": [
+      "0496ca6d-17b6-5bd7-ab2a-16ded77e3415"
+    ],
+    "component-10": [
+      "11cd3c5e-c90d-5859-ad80-0482d26d0a7d"
+    ],
+    "component-100": [
+      "70740fd5-460c-53c8-9830-75c71a89693e"
+    ],
+    "component-101": [
+      "74235fb8-536a-554d-8b65-22bb7a44583c"
+    ],
+    "component-102": [
+      "75888ab5-ca91-5c52-b18e-e4418483dff3"
+    ],
+    "component-103": [
+      "770be821-4a5b-5924-ac96-42d472630918"
+    ],
+    "component-104": [
+      "77aaecb5-3429-5375-8651-874e8aa12667"
+    ],
+    "component-105": [
+      "7936e1c3-02f0-53dc-8ec2-98e89bf3826c"
+    ],
+    "component-106": [
+      "7a32d4c7-cc70-59b2-ab32-cf00174fba1b"
+    ],
+    "component-107": [
+      "7aebc1b2-73af-5b47-807a-56498402e161"
+    ],
+    "component-108": [
+      "7cf37148-abe1-5534-a91e-835b3a63cb38"
+    ],
+    "component-109": [
+      "7dbd0c09-7622-5080-b5ae-c3f842060399"
+    ],
+    "component-11": [
+      "12ec8116-0c8b-5c01-bb0d-4e6117f1e8ab"
+    ],
+    "component-110": [
+      "7dcb769e-26fe-54bb-86a1-e475f083cc62"
+    ],
+    "component-111": [
+      "7fe55b96-951a-5278-9ecb-eed5c13116cd"
+    ],
+    "component-112": [
+      "8044fbb3-2b8e-5649-8305-07e4bf9daddc"
+    ],
+    "component-113": [
+      "83272e84-e261-5dbf-b39d-45b17540b621"
+    ],
+    "component-114": [
+      "83369b63-7de7-55c4-ae77-2c65c4e87285"
+    ],
+    "component-115": [
+      "83f26df4-d67f-5c3f-b3cf-04eefa049338"
+    ],
+    "component-116": [
+      "844d89b1-e2f9-54e2-96a6-d27b4f716d06"
+    ],
+    "component-117": [
+      "84bb40de-b6f5-5454-b9e3-67dedeced430"
+    ],
+    "component-118": [
+      "87500978-2d30-527a-9ad6-97c96d3c1716"
+    ],
+    "component-119": [
+      "87c76b22-7055-58e7-9b1a-18f8fa594b5a"
+    ],
+    "component-12": [
+      "13be2365-0db6-5e70-b830-30d9f5fd6e7a"
+    ],
+    "component-120": [
+      "8b14b5ae-522a-5b60-9fa0-e365aeaf5960"
+    ],
+    "component-121": [
+      "8d0900e4-ec56-53d3-9f4e-24cfcfb05f61"
+    ],
+    "component-122": [
+      "8e46b5e6-fe1e-53f9-b70e-4f573f2d4d02"
+    ],
+    "component-123": [
+      "8ece7699-373d-521f-ad4e-934de29c2a60"
+    ],
+    "component-124": [
+      "8ed13a31-4315-5734-9f57-f1fe543ea3fe"
+    ],
+    "component-125": [
+      "8ed1519e-5f44-536a-9943-a3af6b0d7c17"
+    ],
+    "component-126": [
+      "8f06c773-0ed6-5b66-9d0f-51fa218e4cd8"
+    ],
+    "component-127": [
+      "8f3b3af6-bf93-57aa-bc0b-9625437cd6dd"
+    ],
+    "component-128": [
+      "8f72a2a2-8652-5b46-863c-196559144ae9"
+    ],
+    "component-129": [
+      "90c72269-a87e-50dd-b256-3c8e7a622c06"
+    ],
+    "component-13": [
+      "15167247-fbf1-5a6c-90b8-bcefcc5b714a"
+    ],
+    "component-130": [
+      "9102832b-06b8-5360-a3dd-a803bf280d06"
+    ],
+    "component-131": [
+      "912a2597-6b6b-5a22-b4dd-968fdb163e77"
+    ],
+    "component-132": [
+      "912a56f1-10bf-5991-9486-37df2cfbf967"
+    ],
+    "component-133": [
+      "9362774c-b6f7-5fad-aac4-6a14a589152f"
+    ],
+    "component-134": [
+      "9375db13-02d5-5bcc-9a99-37715b44b4e2"
+    ],
+    "component-135": [
+      "93b45da3-e3c6-52d6-9ec7-c29de913c820"
+    ],
+    "component-136": [
+      "94ab6d05-4e2f-507c-958b-42d7467acb3d"
+    ],
+    "component-137": [
+      "9595a94b-db3a-5787-86ca-7482d18f46d4"
+    ],
+    "component-138": [
+      "97e1e9b8-81cb-5f7a-a55c-1425d77622b0"
+    ],
+    "component-139": [
+      "980d0469-7504-5202-a849-c7a57245631b"
+    ],
+    "component-14": [
+      "154d8477-6ad4-54e7-b422-099ba2ea4008"
+    ],
+    "component-140": [
+      "987fec68-e7b2-5397-af11-efb26c6f1ca2"
+    ],
+    "component-141": [
+      "9ab886e0-5d0f-5356-b461-064935ffc8cc"
+    ],
+    "component-142": [
+      "9baf8734-8ea9-59c3-a8f0-a64612fd1097"
+    ],
+    "component-143": [
+      "9bdaec77-25ec-5166-8a60-6b270e4b9940"
+    ],
+    "component-144": [
+      "9c540db5-173b-5ed6-a055-51ff857906f4"
+    ],
+    "component-145": [
+      "9da93775-b372-5da4-8bed-62c80811e66c"
+    ],
+    "component-146": [
+      "a1ffba46-8211-53e7-b344-b920ba172f57"
+    ],
+    "component-147": [
+      "a20f1613-3880-537b-8359-7d97ef867fa7"
+    ],
+    "component-148": [
+      "a2cb0947-b6d7-520e-baf4-aa286d509449"
+    ],
+    "component-149": [
+      "a3185799-9725-5830-9b73-6db348b12dd5"
+    ],
+    "component-15": [
+      "176cc169-5cd8-5274-8633-3c14a9319ab8"
+    ],
+    "component-150": [
+      "a40c8943-c314-5aaf-960a-11295825d23e"
+    ],
+    "component-151": [
+      "a410a9a9-857c-50ca-9379-1051d2c619ef"
+    ],
+    "component-152": [
+      "a4ecf4fa-f3dc-5c02-a829-5039789e061a"
+    ],
+    "component-153": [
+      "a4ef89d5-a4b5-5023-9ddb-453f612ea4d9"
+    ],
+    "component-154": [
+      "a62c70fe-2e03-5d67-b7e8-f1a6ca64c03b"
+    ],
+    "component-155": [
+      "a6a64590-b797-5378-bdac-68229e0bfb50"
+    ],
+    "component-156": [
+      "a93b0ad9-ee11-59a6-96be-14509e0dad85"
+    ],
+    "component-157": [
+      "a99f5653-5226-51e4-8c46-530ef431d3ef"
+    ],
+    "component-158": [
+      "aa2f95fa-905f-5e66-8f00-0ff39e3041a9"
+    ],
+    "component-159": [
+      "aa57242c-c170-5bda-9f2a-cbbb0c8608bf"
+    ],
+    "component-16": [
+      "17b1d72e-b098-5a98-8000-802e15b1e5df"
+    ],
+    "component-160": [
+      "ab002d94-8428-54be-b1f2-9d02899170fa"
+    ],
+    "component-161": [
+      "ad43460a-4e9b-57eb-9921-03c9a4f029f3"
+    ],
+    "component-162": [
+      "adc7d659-0647-5880-b13d-0c5c0db7e99c"
+    ],
+    "component-163": [
+      "af8213d4-47e4-57ab-b291-c980f24a3353"
+    ],
+    "component-164": [
+      "b39a666e-0154-5b70-8779-196e3f52836c"
+    ],
+    "component-165": [
+      "b79a315d-49a1-54c1-9c6d-3d218a6e41ff"
+    ],
+    "component-166": [
+      "b94066f2-7d10-566d-a4c7-b55894feaa62"
+    ],
+    "component-167": [
+      "baa1cbae-7c03-54eb-b586-a6bd3fb4e3c9"
+    ],
+    "component-168": [
+      "bbd12edc-ea08-5c3c-a5d5-d9e70e09b4c6"
+    ],
+    "component-169": [
+      "bc671afa-a184-5b2b-8da2-875e2bbe00da"
+    ],
+    "component-17": [
+      "18229731-a859-56d8-a307-d64ad2ce792d"
+    ],
+    "component-170": [
+      "bcb6f92d-b67e-5035-a80e-2ced58cf081c"
+    ],
+    "component-171": [
+      "bd32d763-df7c-5783-978b-9516b9de00a9"
+    ],
+    "component-172": [
+      "bd766620-8ce7-5762-9704-46d2665742da"
+    ],
+    "component-173": [
+      "be658900-2ca2-5a3c-927c-51e4453eaaaa"
+    ],
+    "component-174": [
+      "be89f259-f71c-500c-b856-2d41d3e68db1"
+    ],
+    "component-175": [
+      "be995d32-f6a4-5f21-a1cc-6730e7a20755"
+    ],
+    "component-176": [
+      "c1b98cd5-0427-5519-bfcf-5af7ee0ffa02"
+    ],
+    "component-177": [
+      "c446f64e-c09a-5b60-a197-dc3ce6b0b49c"
+    ],
+    "component-178": [
+      "c70f479b-0d92-54af-a22b-fe0d45649471"
+    ],
+    "component-179": [
+      "c7ca901a-6c71-5e00-91e9-630fd7e6ba96"
+    ],
+    "component-18": [
+      "1911391b-878a-5cb7-b6d3-88bbac04f883"
+    ],
+    "component-180": [
+      "c9321a4f-b6b4-5c86-9446-1d0753a5891a"
+    ],
+    "component-181": [
+      "c99865ef-739e-5bac-8354-e4713fa78311"
+    ],
+    "component-182": [
+      "ca1e9df3-ac7b-5ac9-8a4d-07798faf2b3e"
+    ],
+    "component-183": [
+      "cab48fc1-ff1d-5f5a-bad4-675a97ce6a2d"
+    ],
+    "component-184": [
+      "cbcb896f-f4ad-5009-8b7a-24e82ca98f2f"
+    ],
+    "component-185": [
+      "cdd6da15-0e06-5c5a-8817-c1f31a8bf40a"
+    ],
+    "component-186": [
+      "ceedcb29-9516-56e0-9ea1-d5c6464d58b5"
+    ],
+    "component-187": [
+      "cfdcbdd1-0497-527a-a4c0-544c9030c59d"
+    ],
+    "component-188": [
+      "d005aecb-857a-51f6-b770-6cecfa300bdb"
+    ],
+    "component-189": [
+      "d29aee4d-5974-5707-be3c-4cd58ca5bd1b"
+    ],
+    "component-19": [
+      "197e8d85-005b-50d7-90f2-5fca613ad360"
+    ],
+    "component-190": [
+      "d3d04302-a3aa-593c-809c-12af6b37ec79"
+    ],
+    "component-191": [
+      "d50e26b6-8ba3-51b1-92c2-92f5f3891898"
+    ],
+    "component-192": [
+      "d56c7ee7-0ad5-5d41-81c3-e85f3ba33fa8"
+    ],
+    "component-193": [
+      "d7942b2c-d6f9-5760-bf51-cb7c612e9394"
+    ],
+    "component-194": [
+      "d7a402a9-73e6-5f27-8635-9aba6d60535c"
+    ],
+    "component-195": [
+      "d861de26-1e3d-592f-9adc-4b2b2419f3eb"
+    ],
+    "component-196": [
+      "d93b4cf6-8be2-5009-b9b1-ca4d6432e331"
+    ],
+    "component-197": [
+      "da1edd88-2485-5bf8-a35b-f3f6f97c2fe4"
+    ],
+    "component-198": [
+      "dc0944df-4703-5181-ab71-77e9faf56bad"
+    ],
+    "component-199": [
+      "dc4fa61e-fdc6-5a7e-ace3-825f1874654a"
+    ],
+    "component-2": [
+      "05131bc8-5580-59d0-b192-e787c77dada2"
+    ],
+    "component-20": [
+      "1a53fd94-20d3-5fb5-ba55-73b58e482f3b"
+    ],
+    "component-200": [
+      "dda64005-0c52-5b12-b095-2d961702c422"
+    ],
+    "component-201": [
+      "ddbeece8-2dc3-51b9-a287-f7f46e0788b5"
+    ],
+    "component-202": [
+      "dde36d2b-b790-5d40-a0a6-db3e47f39e2c"
+    ],
+    "component-203": [
+      "ddea19d7-c839-5a61-8bf5-f4c384ed2a6d"
+    ],
+    "component-204": [
+      "df58739b-1935-5e96-a61a-6b04223ba3c9"
+    ],
+    "component-205": [
+      "df929a3d-9bf8-5647-90f0-8e1da9e3b5dd"
+    ],
+    "component-206": [
+      "e00d2e86-c520-54b8-bfab-c5f8dcc0a7f9"
+    ],
+    "component-207": [
+      "e35b78cf-381d-5137-bce1-105ba861494d"
+    ],
+    "component-208": [
+      "e3d01f5c-2aa6-535f-88d7-321695ed953d"
+    ],
+    "component-209": [
+      "e753ae6b-f61e-5f7e-b94f-270c636a3f73"
+    ],
+    "component-21": [
+      "1aaa3ca8-d5bf-5674-9a62-53ae2ef3708d"
+    ],
+    "component-210": [
+      "e87feb1d-09a6-5eb0-a0e5-8371eacbaaa9"
+    ],
+    "component-211": [
+      "e949b0f7-ad85-5b0d-8450-4bbfaada9b1d"
+    ],
+    "component-212": [
+      "e9803e09-6ee9-5c22-bbdf-11d3f3b39159"
+    ],
+    "component-213": [
+      "eac6a4af-9b89-5b25-b9b8-6a274f13e73f"
+    ],
+    "component-214": [
+      "eac8a342-e1b7-5b90-9e1c-8ab7e12aa2b1"
+    ],
+    "component-215": [
+      "ebb599e7-fd86-5f7e-88fe-5748345dfc91"
+    ],
+    "component-216": [
+      "ec379e4f-7d03-5cfc-965a-c72e46e79265"
+    ],
+    "component-217": [
+      "ed9acc16-022e-5bcd-ba31-c851ef7b371d"
+    ],
+    "component-218": [
+      "ee9560db-1a07-5a9f-b0ee-ea1b1c5fd264"
+    ],
+    "component-219": [
+      "ef482282-e211-5f64-918f-714b6c74f033"
+    ],
+    "component-22": [
+      "1aeb4d58-ec59-584e-81b2-b1af30fcf6f0"
+    ],
+    "component-220": [
+      "efa112e9-b24a-58aa-9328-e374721fe2d7"
+    ],
+    "component-221": [
+      "f0019e3e-a52d-55b5-a217-5de28439fefb"
+    ],
+    "component-222": [
+      "f104f9c7-f5c5-5f2c-8d82-c7aa272934e4"
+    ],
+    "component-223": [
+      "f1fffb92-0d49-5ec2-82d6-b4c53c6f0580"
+    ],
+    "component-224": [
+      "f228288e-337a-5359-9209-cd44768e5828"
+    ],
+    "component-225": [
+      "f2345784-bdfd-5675-8053-b034eb1661f0"
+    ],
+    "component-226": [
+      "f3e13c67-1751-5887-81f5-fbb72a688aa2"
+    ],
+    "component-227": [
+      "f4eaed74-a349-558b-8ef0-d1bd51ab0e25"
+    ],
+    "component-228": [
+      "f6778381-2388-547a-9b1a-13bf3d720614"
+    ],
+    "component-229": [
+      "f68afb4c-5d05-5113-933b-68ab0f084aa9"
+    ],
+    "component-23": [
+      "1c1b05de-70d4-522a-9672-a294f79d9b3e"
+    ],
+    "component-230": [
+      "f7c5eff4-48d2-579f-9126-1111b6fe6396"
+    ],
+    "component-231": [
+      "f7f6f1d6-bf1b-5a2d-b0be-91c2e44e94e0"
+    ],
+    "component-232": [
+      "f8bcf50d-c93d-57ad-beee-cebee295c98e"
+    ],
+    "component-233": [
+      "f95a9223-2c8c-573e-a0ec-d4e6ed1c4201"
+    ],
+    "component-234": [
+      "fa7a8bdb-bcc0-50f0-9372-d990989f3791"
+    ],
+    "component-235": [
+      "fb9a3e96-7ada-5ce4-a423-70378bafd9dd"
+    ],
+    "component-236": [
+      "fc28b69c-59ab-584c-a22e-dbdb4a747cdb"
+    ],
+    "component-237": [
+      "fd091c04-68c5-5094-8764-7d48c1b07ae2"
+    ],
+    "component-238": [
+      "fd774ec6-e41b-506c-b438-bfa6474ff086"
+    ],
+    "component-239": [
+      "fe13f2ce-5d2a-55ca-8566-bf5334a0407b"
+    ],
+    "component-24": [
+      "1e2c7c6f-7e60-569d-a50c-9ef6233e5c92"
+    ],
+    "component-240": [
+      "fed012d7-537d-5253-9604-e04cf3aed8eb"
+    ],
+    "component-241": [
+      "ff7b1b39-4d18-506a-83e9-e5455d317f86"
+    ],
+    "component-25": [
+      "1e3d250e-3284-56f6-a53a-b53238c2d501"
+    ],
+    "component-26": [
+      "1eb8540a-1b5a-5d0f-87d6-6b191135d2a7"
+    ],
+    "component-27": [
+      "1ed23651-1c12-58af-88f2-9f683e47e128"
+    ],
+    "component-28": [
+      "1f2f9a58-b676-54d8-8836-032fa176fccc"
+    ],
+    "component-29": [
+      "1f7e5d3b-8fe9-5e8a-a0b8-22aa8c0af43f"
+    ],
+    "component-3": [
+      "088723c8-c39e-5348-a730-b346d8d27415"
+    ],
+    "component-30": [
+      "20130efa-8e52-52f2-a0e5-53f59958215d"
+    ],
+    "component-31": [
+      "236d2520-64a0-5795-978e-1495ee71cd4b"
+    ],
+    "component-32": [
+      "23f7d0ce-5c03-5050-9671-23d98e014e86"
+    ],
+    "component-33": [
+      "25f9d148-a31e-5934-ad2d-70b85eeb5254"
+    ],
+    "component-34": [
+      "289873c5-d424-5eb9-a68b-3fe0bb2f25c2"
+    ],
+    "component-35": [
+      "2913d6fb-3585-58cd-823b-6830ebd5a22f"
+    ],
+    "component-36": [
+      "29786dac-19a5-5315-a63d-5aef95fe2ec6"
+    ],
+    "component-37": [
+      "2978be8f-3779-59a8-b636-c8c30c058f4d"
+    ],
+    "component-38": [
+      "2adece37-2b47-5214-9aa5-119cf1bf7e9f"
+    ],
+    "component-39": [
+      "2cdf6a32-431a-5a7d-89f4-3f965cdfaa7e"
+    ],
+    "component-4": [
+      "08c5054d-919a-5ece-b872-7613429481b5"
+    ],
+    "component-40": [
+      "2ed1743b-72b6-5ad1-9a4c-aca65025b4a1"
+    ],
+    "component-41": [
+      "2f1e9c19-1b20-5dd9-8021-5c5c210203c1"
+    ],
+    "component-42": [
+      "305a7f26-bf9d-55e9-825d-e3e6637c469e"
+    ],
+    "component-43": [
+      "313ad4b0-2b1d-58c4-8261-1723e64d32a7"
+    ],
+    "component-44": [
+      "32b670f2-5247-5cf2-a65c-3b19a3c1b45c"
+    ],
+    "component-45": [
+      "330a8087-16ad-596c-a071-49e38c001edd"
+    ],
+    "component-46": [
+      "3753a366-d27e-5184-ae29-d18872f37913"
+    ],
+    "component-47": [
+      "3970bf34-4d2b-530e-bff8-8f52f2b079fc"
+    ],
+    "component-48": [
+      "3cd0bdeb-5792-5cd7-b9c0-44600ea7a8b7"
+    ],
+    "component-49": [
+      "3ce5c472-c3c5-5b8d-a0d2-444f08f46b4a"
+    ],
+    "component-5": [
+      "09a73099-ee81-59e3-81dd-089e8e204a46"
+    ],
+    "component-50": [
+      "3f334979-bbcb-52d1-bcf1-55902ee7b1fe"
+    ],
+    "component-51": [
+      "3fc97ba2-6481-5e75-8a91-a454866f3514"
+    ],
+    "component-52": [
+      "40201cc7-d8cc-5f64-9175-8e98cc0baaba"
+    ],
+    "component-53": [
+      "405125d1-058e-5962-b2f8-eb942080346f"
+    ],
+    "component-54": [
+      "4153f15d-3e80-54f0-a0c6-dbd83393d794"
+    ],
+    "component-55": [
+      "42631243-9b0e-576d-af56-c846804a09e9"
+    ],
+    "component-56": [
+      "42c38421-3c9d-54eb-abf5-467a35bc7cef"
+    ],
+    "component-57": [
+      "447a485a-469d-51ad-a881-ad9098e461a6"
+    ],
+    "component-58": [
+      "46fdab1a-dc1f-5d61-8657-8846e7f03cb9"
+    ],
+    "component-59": [
+      "481e268f-64db-5c9f-9875-b3cf0a143aa5"
+    ],
+    "component-6": [
+      "0a601d6b-f0a5-55f6-98c0-0fc943e2d91e"
+    ],
+    "component-60": [
+      "482b2c51-dcfb-5bcb-829e-ff60bd141803"
+    ],
+    "component-61": [
+      "499d87cc-a4d0-56aa-acf5-f32e6c3fe6a2"
+    ],
+    "component-62": [
+      "49ae02a4-ce12-5422-8b1f-b45bf835b166"
+    ],
+    "component-63": [
+      "49cb6d9f-8b51-5174-97c5-2d768190b2da"
+    ],
+    "component-64": [
+      "4b1c6ef6-a5ed-5187-a8de-df83049a4cd3"
+    ],
+    "component-65": [
+      "4d124559-ac55-5d27-9062-385a341bfe76"
+    ],
+    "component-66": [
+      "4d88ead4-6f48-5ba8-b79f-b28382eb7c83"
+    ],
+    "component-67": [
+      "4ebace5b-6713-5ce8-93c0-981e5f450474"
+    ],
+    "component-68": [
+      "506dc229-ecbc-5972-9702-c5f7d2b174f2"
+    ],
+    "component-69": [
+      "5130a0d0-b36e-5896-b4ca-22da9a372352"
+    ],
+    "component-7": [
+      "0d93dbe1-48a7-54d9-8f51-fb3f79ad1a62"
+    ],
+    "component-70": [
+      "51d40262-1387-5de9-ab71-f971061cbfd6"
+    ],
+    "component-71": [
+      "5498e569-37ba-529d-bb20-916ab95f0186"
+    ],
+    "component-72": [
+      "54e1d8ab-c52d-57da-b142-67a9155babc6"
+    ],
+    "component-73": [
+      "55cef201-e789-5231-9b05-8e36be668875"
+    ],
+    "component-74": [
+      "564113a3-1e99-5bec-b329-86172cc90d32"
+    ],
+    "component-75": [
+      "5653a2c5-868a-5278-a6ef-c59c7db667ab"
+    ],
+    "component-76": [
+      "5763eb3c-97b8-5aa7-b74f-e8e53920ba1d"
+    ],
+    "component-77": [
+      "57cfa73a-18e0-584e-a50b-f0b4dcdb0e16"
+    ],
+    "component-78": [
+      "59938794-5dbc-5aeb-99e0-f1a61fae6670"
+    ],
+    "component-79": [
+      "59b635d2-cdd8-583f-9bc9-8ed36401f7a9"
+    ],
+    "component-8": [
+      "11573dc2-3d65-5868-96f8-47bd0f5cbdef"
+    ],
+    "component-80": [
+      "5a34ccda-7e15-51c4-937a-4877d4af82c6"
+    ],
+    "component-81": [
+      "5b250dbe-31e4-53ef-9051-715e21068852"
+    ],
+    "component-82": [
+      "5cb0897a-6e11-522d-8bfc-c40f69f1b0d0"
+    ],
+    "component-83": [
+      "5d00bc45-83a8-5ad4-a4a2-4d26df9a082e"
+    ],
+    "component-84": [
+      "5e3d8a33-7c55-5832-9d4b-b7d8d841047e"
+    ],
+    "component-85": [
+      "5e5cad40-bf91-5279-a833-0876c2b3f319"
+    ],
+    "component-86": [
+      "5eabfb28-cbd8-593f-857b-5cddc18af633"
+    ],
+    "component-87": [
+      "6010f4d8-3ce4-5a39-9cb8-3a8241a98491"
+    ],
+    "component-88": [
+      "60779bbb-93ec-51df-a1e6-5c3e54b6be9c"
+    ],
+    "component-89": [
+      "6209e37f-b186-54d5-9f86-fe9882095f39"
+    ],
+    "component-9": [
+      "11869caa-6824-5daf-83ce-c7ced55010bc"
+    ],
+    "component-90": [
+      "66035204-48d4-53ab-9b98-f85ad98b245b"
+    ],
+    "component-91": [
+      "662f64d4-1d69-57cd-b046-c5e43d99cdd8"
+    ],
+    "component-92": [
+      "67e721de-a953-5c04-9710-c9541c315f82"
+    ],
+    "component-93": [
+      "68e2f85f-9a9d-5bc4-bc1d-57c304438c70"
+    ],
+    "component-94": [
+      "69a71e17-7628-5a0c-b84a-11eecd6af810"
+    ],
+    "component-95": [
+      "6b12d1c3-08e2-519e-ad4e-bdfa23e17f5c"
+    ],
+    "component-96": [
+      "6bbb2bfb-08ad-5944-820c-b4fce11e4c31"
+    ],
+    "component-97": [
+      "6bdcf033-1522-55f9-9c1c-67c3dcb20d1a"
+    ],
+    "component-98": [
+      "6d5d873a-a3d5-528a-8992-137d790905f0"
+    ],
+    "component-99": [
+      "6db354a4-cb2b-545e-be76-e2ef495f9f9e"
+    ]
+  }
+}

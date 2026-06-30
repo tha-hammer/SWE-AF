@@ -1,0 +1,17 @@
+{
+  "name": "backend",
+  "type": "directory",
+  "processors": {},
+  "endpoints": {},
+  "request_handlers": {},
+  "data_access_objects": {},
+  "services": {},
+  "filters": {},
+  "data_structures": {},
+  "verifiers": {},
+  "error_definitions": {},
+  "logging": {},
+  "settings": {},
+  "process_chains": {},
+  "metadata": {}
+}

@@ -48,6 +48,17 @@ build/
 *.egg-info/
 *.egg
 
+# Node.js / JS tooling
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+
+# Rust / Cargo
+target/
+
 # Pipeline output files
 .claude_output_*.json
 

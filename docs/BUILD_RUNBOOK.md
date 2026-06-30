@@ -58,6 +58,10 @@ Codex CLI uses `auth.json` only when `OPENAI_API_KEY` is unset.
 
 ## 4. Submit a build
 
+> **Spawning a run as an agent (in-place vs clone, untracked input docs, parallel-run
+> isolation, the node-restart/`cancel` orphan traps, post-build reconcile) →
+> [`SPAWN_RUNBOOK.md`](SPAWN_RUNBOOK.md).** This section is just the raw submit mechanics.
+
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/execute/async/swe-planner.build \
   -H 'Content-Type: application/json' -d @payload.json

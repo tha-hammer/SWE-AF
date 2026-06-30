@@ -1,0 +1,14 @@
+{
+  "name": "frontend",
+  "type": "directory",
+  "modules": {},
+  "components": {},
+  "access_controls": {},
+  "data_loaders": {},
+  "utility_modules": {},
+  "api_contracts": {},
+  "verifiers": {},
+  "logging": {},
+  "settings": {},
+  "metadata": {}
+}
